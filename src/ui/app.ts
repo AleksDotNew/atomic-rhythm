@@ -1,0 +1,355 @@
+import { analyzeMolecule, MolecularAnalysis } from '../chem/analysis';
+import { Molecule } from '../chem/molecule';
+import { MoleculePreset, PRESETS } from '../chem/presets';
+import { parseSmiles } from '../chem/smiles';
+import { AudioScheduler } from '../audio/scheduler';
+import { createDrumSynth, DrumSynth, SynthVoiceName } from '../audio/synth';
+import { exportToMidi } from '../export/midi';
+import { exportToStrudel } from '../export/strudel';
+import { calculateBpm, isAtomExcited } from '../rhythm/excitation';
+import { Pattern } from '../rhythm/ir';
+import { DEFAULT_MOD_MATRIX, ModulationMatrix, ModRoute, ModSource, ModDest } from '../rhythm/modmatrix';
+import { buildMoleculePattern, FormMode, PlaybackMode } from '../rhythm/molecule-pattern';
+import { buildFormSequence } from '../rhythm/form';
+import { loadRecipes, saveRecipe, SavedRecipe } from '../storage/db';
+import { MoleculeSvgView } from '../viz/molecule-svg';
+import { SequencerGridView } from '../viz/sequencer-grid';
+
+export class App {
+  private currentMolecule: Molecule;
+  private currentAnalysis: MolecularAnalysis;
+  private currentPattern: Pattern;
+  private currentMatrix: ModulationMatrix = DEFAULT_MOD_MATRIX;
+
+  private baseBpm: number = 120;
+  private temperature: number = 0;
+  private playbackMode: PlaybackMode = 'sequential';
+  private formMode: FormMode = 'direct';
+  private atomsPerBar: number = 2;
+
+  private audioCtx: AudioContext | null = null;
+  private drumSynth: DrumSynth | null = null;
+  private scheduler: AudioScheduler | null = null;
+
+  private svgView!: MoleculeSvgView;
+  private seqView!: SequencerGridView;
+
+  constructor() {
+    // Default start with Benzene
+    this.currentMolecule = parseSmiles('c1ccccc1');
+    this.currentAnalysis = analyzeMolecule(this.currentMolecule);
+    this.currentPattern = buildMoleculePattern(this.currentMolecule, {
+      mode: this.playbackMode,
+      atomsPerBar: this.atomsPerBar,
+      matrix: this.currentMatrix,
+      temperature: this.temperature,
+    });
+  }
+
+  mount(root: HTMLElement): void {
+    root.innerHTML = `
+      <header class="transport-bar">
+        <div class="brand">
+          <div class="brand-icon"></div>
+          <h1>Atomic Rhythm</h1>
+        </div>
+
+        <div class="transport-controls">
+          <button id="btn-play" class="btn-primary">▶ Play</button>
+
+          <div class="control-group">
+            <label for="input-bpm">BPM</label>
+            <input type="number" id="input-bpm" value="120" min="40" max="300" style="width: 65px;" />
+          </div>
+
+          <div class="control-group">
+            <label for="slider-temp">Temp: <span id="temp-val">0</span>°</label>
+            <input type="range" id="slider-temp" min="0" max="100" value="0" />
+            <span id="effective-bpm" style="font-size: 0.8rem; color: var(--accent-cyan);">(120 bpm)</span>
+          </div>
+
+          <div class="control-group">
+            <label for="select-mode">Mode</label>
+            <select id="select-mode">
+              <option value="sequential">Sequential (Atoms in bar)</option>
+              <option value="overlay">Overlay (Simultaneous)</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="select-form">Form</label>
+            <select id="select-form">
+              <option value="direct">Direct Loop</option>
+              <option value="assembly">Atom Assembly</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="input-apb">Atoms/Bar</label>
+            <input type="number" id="input-apb" value="2" min="1" max="8" style="width: 50px;" />
+          </div>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <!-- Left Panel: Presets & SMILES Input -->
+        <section class="panel">
+          <h2>Chemical Input</h2>
+
+          <div class="input-block">
+            <label for="input-smiles">SMILES Formula</label>
+            <input type="text" id="input-smiles" value="c1ccccc1" placeholder="e.g. CCO, [H][H]" />
+            <div id="smiles-error" class="status-error" style="display: none;"></div>
+          </div>
+
+          <div class="input-block">
+            <label>Presets</label>
+            <div class="preset-list" id="preset-list"></div>
+          </div>
+        </section>
+
+        <!-- Center Stage: SVG Molecular Visualization & Sequencer Grid -->
+        <section class="stage-panel">
+          <div class="svg-container" id="svg-container"></div>
+          <div class="sequencer-container" id="seq-container"></div>
+        </section>
+
+        <!-- Right Panel: Modulation Matrix & Export -->
+        <section class="panel">
+          <h2>Modulation Matrix</h2>
+          <div class="routes-list" id="routes-list"></div>
+
+          <h2 style="margin-top: 8px;">Export</h2>
+          <div class="export-actions">
+            <button id="btn-export-strudel" class="btn-secondary">📋 Copy Strudel Code</button>
+            <button id="btn-export-midi" class="btn-secondary">💾 Download MIDI (.mid)</button>
+          </div>
+        </section>
+      </main>
+    `;
+
+    // Initialize views
+    const svgContainer = root.querySelector('#svg-container') as HTMLElement;
+    this.svgView = new MoleculeSvgView(svgContainer);
+
+    const seqContainer = root.querySelector('#seq-container') as HTMLElement;
+    this.seqView = new SequencerGridView(seqContainer);
+
+    // Setup event listeners
+    this.bindEvents(root);
+
+    // Populate preset list
+    this.renderPresets(root);
+
+    // Populate routes list
+    this.renderRoutes(root);
+
+    // Render initial views
+    this.updateAll();
+  }
+
+  private initAudio(): void {
+    if (!this.audioCtx) {
+      const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      this.audioCtx = new AudioCtxClass();
+      this.drumSynth = createDrumSynth(this.audioCtx);
+      this.scheduler = new AudioScheduler(this.audioCtx, this.drumSynth);
+    }
+  }
+
+  private updateAll(): void {
+    const effectiveBpm = calculateBpm(this.baseBpm, this.temperature);
+
+    this.currentPattern = buildMoleculePattern(this.currentMolecule, {
+      mode: this.playbackMode,
+      atomsPerBar: this.atomsPerBar,
+      matrix: this.currentMatrix,
+      temperature: this.temperature,
+    });
+
+    // Render SVG
+    this.svgView.render(this.currentMolecule, this.currentAnalysis);
+
+    // Check excitation for each atom
+    for (let i = 0; i < this.currentMolecule.atoms.length; i++) {
+      const a = this.currentMolecule.atoms[i];
+      const excited = isAtomExcited(this.temperature, a.element.ionizationEnergy1);
+      this.svgView.setExcited(i, excited);
+    }
+
+    // Render Sequencer Grid
+    this.seqView.render(this.currentPattern);
+
+    // Update scheduler if running
+    if (this.scheduler) {
+      this.scheduler.setPattern(this.currentPattern, effectiveBpm);
+    }
+  }
+
+  private bindEvents(root: HTMLElement): void {
+    const btnPlay = root.querySelector('#btn-play') as HTMLButtonElement;
+    const inputBpm = root.querySelector('#input-bpm') as HTMLInputElement;
+    const sliderTemp = root.querySelector('#slider-temp') as HTMLInputElement;
+    const tempVal = root.querySelector('#temp-val') as HTMLElement;
+    const effectiveBpmLabel = root.querySelector('#effective-bpm') as HTMLElement;
+    const selectMode = root.querySelector('#select-mode') as HTMLSelectElement;
+    const selectForm = root.querySelector('#select-form') as HTMLSelectElement;
+    const inputApb = root.querySelector('#input-apb') as HTMLInputElement;
+    const inputSmiles = root.querySelector('#input-smiles') as HTMLInputElement;
+    const smilesError = root.querySelector('#smiles-error') as HTMLElement;
+    const btnExportStrudel = root.querySelector('#btn-export-strudel') as HTMLButtonElement;
+    const btnExportMidi = root.querySelector('#btn-export-midi') as HTMLButtonElement;
+
+    // Transport Play/Stop
+    btnPlay.addEventListener('click', () => {
+      this.initAudio();
+      if (!this.scheduler) return;
+
+      if (this.scheduler.isPlaying) {
+        this.scheduler.stop();
+        btnPlay.textContent = '▶ Play';
+        btnPlay.classList.remove('btn-active');
+        this.svgView.highlightAtom(null);
+      } else {
+        const effectiveBpm = calculateBpm(this.baseBpm, this.temperature);
+        this.scheduler.setPattern(this.currentPattern, effectiveBpm);
+        this.scheduler.start((atomIndex, voice, tick) => {
+          if (atomIndex !== undefined) {
+            this.svgView.highlightAtom(atomIndex);
+          }
+          if (tick !== undefined) {
+            this.seqView.updatePlayhead(tick);
+          }
+        });
+        btnPlay.textContent = '■ Stop';
+        btnPlay.classList.add('btn-active');
+      }
+    });
+
+    // BPM change
+    inputBpm.addEventListener('change', () => {
+      this.baseBpm = Math.max(40, Math.min(300, parseInt(inputBpm.value, 10) || 120));
+      const effectiveBpm = calculateBpm(this.baseBpm, this.temperature);
+      effectiveBpmLabel.textContent = `(${effectiveBpm} bpm)`;
+      if (this.scheduler) {
+        this.scheduler.setBpm(effectiveBpm);
+      }
+    });
+
+    // Temperature slider
+    sliderTemp.addEventListener('input', () => {
+      this.temperature = parseInt(sliderTemp.value, 10);
+      tempVal.textContent = `${this.temperature}`;
+      const effectiveBpm = calculateBpm(this.baseBpm, this.temperature);
+      effectiveBpmLabel.textContent = `(${effectiveBpm} bpm)`;
+      this.updateAll();
+    });
+
+    // Mode change
+    selectMode.addEventListener('change', () => {
+      this.playbackMode = selectMode.value as PlaybackMode;
+      this.updateAll();
+    });
+
+    // Form change
+    selectForm.addEventListener('change', () => {
+      this.formMode = selectForm.value as FormMode;
+      this.updateAll();
+    });
+
+    // Atoms per bar
+    inputApb.addEventListener('change', () => {
+      this.atomsPerBar = Math.max(1, Math.min(8, parseInt(inputApb.value, 10) || 2));
+      this.updateAll();
+    });
+
+    // SMILES input
+    inputSmiles.addEventListener('input', () => {
+      try {
+        const mol = parseSmiles(inputSmiles.value);
+        this.currentMolecule = mol;
+        this.currentAnalysis = analyzeMolecule(mol);
+        smilesError.style.display = 'none';
+        this.updateAll();
+      } catch (err) {
+        smilesError.textContent = (err as Error).message;
+        smilesError.style.display = 'block';
+      }
+    });
+
+    // Strudel Export
+    btnExportStrudel.addEventListener('click', async () => {
+      const code = exportToStrudel(this.currentPattern);
+      try {
+        await navigator.clipboard.writeText(code);
+        const originalText = btnExportStrudel.textContent;
+        btnExportStrudel.textContent = '✓ Copied!';
+        setTimeout(() => {
+          btnExportStrudel.textContent = originalText;
+        }, 1500);
+      } catch {
+        alert(code);
+      }
+    });
+
+    // MIDI Export
+    btnExportMidi.addEventListener('click', () => {
+      const effectiveBpm = calculateBpm(this.baseBpm, this.temperature);
+      const bytes = exportToMidi(this.currentPattern, effectiveBpm);
+      const blob = new Blob([bytes], { type: 'audio/midi' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `atomic-rhythm-${this.currentMolecule.name || 'molecule'}.mid`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  private renderPresets(root: HTMLElement): void {
+    const list = root.querySelector('#preset-list') as HTMLElement;
+    list.innerHTML = '';
+
+    for (const preset of PRESETS) {
+      const card = document.createElement('div');
+      card.className = `preset-card ${preset.smiles === 'c1ccccc1' ? 'active' : ''}`;
+      card.innerHTML = `
+        <div class="preset-name">${preset.name}</div>
+        <div class="preset-desc">${preset.description}</div>
+      `;
+
+      card.addEventListener('click', () => {
+        root.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+
+        const inputSmiles = root.querySelector('#input-smiles') as HTMLInputElement;
+        inputSmiles.value = preset.smiles;
+
+        this.currentMolecule = parseSmiles(preset.smiles, preset.name);
+        this.currentAnalysis = analyzeMolecule(this.currentMolecule);
+        this.updateAll();
+      });
+
+      list.appendChild(card);
+    }
+  }
+
+  private renderRoutes(root: HTMLElement): void {
+    const container = root.querySelector('#routes-list') as HTMLElement;
+    container.innerHTML = '';
+
+    for (let i = 0; i < this.currentMatrix.routes.length; i++) {
+      const route = this.currentMatrix.routes[i];
+      const row = document.createElement('div');
+      row.className = 'route-row';
+      row.innerHTML = `
+        <span style="font-weight: 600; color: var(--accent-cyan); width: 85px;">${route.voice}</span>
+        <span style="color: var(--text-muted); font-size: 0.75rem;">${route.dest}</span>
+        <span style="color: var(--accent-amber); font-weight: 500;">${route.source}</span>
+      `;
+      container.appendChild(row);
+    }
+  }
+}
