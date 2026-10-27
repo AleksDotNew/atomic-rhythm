@@ -1,4 +1,4 @@
-import { analyzeMolecule } from '../chem/analysis';
+import { analyzeMolecule, computeOrderedSequence, OrderStrategy } from '../chem/analysis';
 import { Molecule } from '../chem/molecule';
 import { SynthVoiceName } from '../audio/synth';
 import { buildAtomPattern } from './atom-pattern';
@@ -16,6 +16,8 @@ export interface MoleculePatternOptions {
   readonly matrix?: ModulationMatrix;
   readonly temperature?: number;
   readonly atomVoiceOverrides?: Record<number, SynthVoiceName | 'default' | 'mute'>;
+  readonly orderStrategy?: OrderStrategy;
+  readonly customOrder?: readonly number[];
 }
 
 export function buildMoleculePattern(
@@ -27,6 +29,8 @@ export function buildMoleculePattern(
   const matrix = options.matrix ?? DEFAULT_MOD_MATRIX;
   const temperature = options.temperature ?? 0;
   const overrides = options.atomVoiceOverrides ?? {};
+  const orderStrategy = options.orderStrategy ?? 'structural';
+  const customOrder = options.customOrder;
 
   if (mol.atoms.length === 0) {
     return createPattern(1, []);
@@ -60,7 +64,7 @@ export function buildMoleculePattern(
   const hasHeavyAtoms = mol.atoms.some(a => a.element.symbol !== 'H');
 
   if (mode === 'sequential') {
-    if (hasHeavyAtoms && analysis.structuralUnits.length > 0) {
+    if (orderStrategy === 'structural' && hasHeavyAtoms && analysis.structuralUnits.length > 0) {
       // Structural Units / Ring Cycle Mode (e.g. cyclopentane 5-part cycle)
       const totalBars = Math.max(1, analysis.structuralUnits.length);
       const fullCycleTicks = totalBars * oneBarTicks;
@@ -74,12 +78,14 @@ export function buildMoleculePattern(
         for (let p = 0; p < unit.peripheralAtomIndices.length; p++) {
           const pIdx = unit.peripheralAtomIndices[p];
           const pAtom = mol.atoms[pIdx];
-          let pTracks = buildAtomPattern(pAtom, matrix, pIdx, oneBarTicks);
+          const pBondCount = analysis.atomBondCounts[pIdx];
+          const pBondWeight = analysis.atomBondWeights[pIdx];
+
+          let pTracks = buildAtomPattern(pAtom, matrix, pIdx, oneBarTicks, pBondCount, pBondWeight);
           pTracks = applyExcitationToAtom(pAtom, pTracks, temperature, currentBar);
 
           for (const track of pTracks) {
             for (const evt of track.events) {
-              // Stagger multiple hydrogens if on the same track so they complement each other
               const offsetTick = p > 0 ? (p * 24) % oneBarTicks : 0;
               addEvent(track.voice, fullCycleTicks, {
                 ...evt,
@@ -92,7 +98,10 @@ export function buildMoleculePattern(
         // 2. Central Heavy Atom plays its driving foundation
         const heavyIdx = unit.heavyAtomIndex;
         const heavyAtom = mol.atoms[heavyIdx];
-        let heavyTracks = buildAtomPattern(heavyAtom, matrix, heavyIdx, oneBarTicks);
+        const heavyBondCount = analysis.atomBondCounts[heavyIdx];
+        const heavyBondWeight = analysis.atomBondWeights[heavyIdx];
+
+        let heavyTracks = buildAtomPattern(heavyAtom, matrix, heavyIdx, oneBarTicks, heavyBondCount, heavyBondWeight);
         heavyTracks = applyExcitationToAtom(heavyAtom, heavyTracks, temperature, currentBar);
 
         for (const track of heavyTracks) {
@@ -144,18 +153,21 @@ export function buildMoleculePattern(
 
       return createPattern(totalBars, tracks);
     } else {
-      // Linear diatomic / hydrogen fallback mode (atoms per bar segments)
-      const totalBars = Math.max(1, Math.ceil(mol.atoms.length / atomsPerBar));
+      // Ordered sequence mode (custom, bondWeight, mass, or fallback for all-H)
+      const sequence = computeOrderedSequence(mol, analysis, orderStrategy, customOrder);
+      const totalBars = Math.max(1, Math.ceil(sequence.length / atomsPerBar));
       const fullCycleTicks = totalBars * oneBarTicks;
       const segmentTicks = Math.round(oneBarTicks / atomsPerBar);
 
-      for (let seqIdx = 0; seqIdx < analysis.traversalOrder.length; seqIdx++) {
-        const atomIdx = analysis.traversalOrder[seqIdx];
+      for (let seqIdx = 0; seqIdx < sequence.length; seqIdx++) {
+        const atomIdx = sequence[seqIdx];
         const atom = mol.atoms[atomIdx];
+        const bondCount = analysis.atomBondCounts[atomIdx];
+        const bondWeight = analysis.atomBondWeights[atomIdx];
         const segmentStartTick = seqIdx * segmentTicks;
         const currentBar = Math.floor(segmentStartTick / oneBarTicks) + 1;
 
-        let atomTracks = buildAtomPattern(atom, matrix, atomIdx, segmentTicks);
+        let atomTracks = buildAtomPattern(atom, matrix, atomIdx, segmentTicks, bondCount, bondWeight);
         atomTracks = applyExcitationToAtom(atom, atomTracks, temperature, currentBar);
 
         for (const track of atomTracks) {
@@ -167,8 +179,8 @@ export function buildMoleculePattern(
           }
         }
 
-        if (seqIdx < analysis.traversalOrder.length - 1) {
-          const nextAtomIdx = analysis.traversalOrder[seqIdx + 1];
+        if (seqIdx < sequence.length - 1) {
+          const nextAtomIdx = sequence[seqIdx + 1];
           const bond = mol.bonds.find(
             b => (b.atomA === atomIdx && b.atomB === nextAtomIdx) || (b.atomA === nextAtomIdx && b.atomB === atomIdx)
           );
@@ -219,7 +231,10 @@ export function buildMoleculePattern(
 
     for (let atomIdx = 0; atomIdx < mol.atoms.length; atomIdx++) {
       const atom = mol.atoms[atomIdx];
-      let atomTracks = buildAtomPattern(atom, matrix, atomIdx, fullCycleTicks);
+      const bondCount = analysis.atomBondCounts[atomIdx];
+      const bondWeight = analysis.atomBondWeights[atomIdx];
+
+      let atomTracks = buildAtomPattern(atom, matrix, atomIdx, fullCycleTicks, bondCount, bondWeight);
       atomTracks = applyExcitationToAtom(atom, atomTracks, temperature, 1);
 
       for (const track of atomTracks) {

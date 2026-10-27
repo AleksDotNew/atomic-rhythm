@@ -1,4 +1,4 @@
-import { analyzeMolecule, MolecularAnalysis } from '../chem/analysis';
+import { analyzeMolecule, MolecularAnalysis, computeOrderedSequence, OrderStrategy } from '../chem/analysis';
 import { Molecule } from '../chem/molecule';
 import { MoleculePreset, PRESETS } from '../chem/presets';
 import { parseSmiles } from '../chem/smiles';
@@ -19,13 +19,17 @@ export class App {
   private currentMolecule: Molecule;
   private currentAnalysis: MolecularAnalysis;
   private currentPattern: Pattern;
-  private currentMatrix: ModulationMatrix = DEFAULT_MOD_MATRIX;
+  private currentMatrix: ModulationMatrix = {
+    routes: DEFAULT_MOD_MATRIX.routes.map(r => ({ ...r })),
+  };
 
   private baseBpm: number = 120;
   private temperature: number = 0;
   private playbackMode: PlaybackMode = 'sequential';
   private formMode: FormMode = 'direct';
   private atomsPerBar: number = 2;
+  private orderStrategy: OrderStrategy = 'structural';
+  private customOrder: number[] = [];
 
   private selectedAtomIndex: number = 0;
   private atomVoiceOverrides: Record<number, SynthVoiceName | 'default' | 'mute'> = {};
@@ -42,12 +46,15 @@ export class App {
     // Default start with Benzene
     this.currentMolecule = parseSmiles('c1ccccc1');
     this.currentAnalysis = analyzeMolecule(this.currentMolecule);
+    this.customOrder = this.currentMolecule.atoms.map((_, idx) => idx);
     this.currentPattern = buildMoleculePattern(this.currentMolecule, {
       mode: this.playbackMode,
       atomsPerBar: this.atomsPerBar,
       matrix: this.currentMatrix,
       temperature: this.temperature,
       atomVoiceOverrides: this.atomVoiceOverrides,
+      orderStrategy: this.orderStrategy,
+      customOrder: this.customOrder,
     });
   }
 
@@ -79,6 +86,16 @@ export class App {
             <select id="select-mode">
               <option value="sequential">Sequential (5-Part / Cycle)</option>
               <option value="overlay">Overlay (Simultaneous)</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="select-order-strategy">Sequence</label>
+            <select id="select-order-strategy">
+              <option value="structural">Structural (Ring Cycle)</option>
+              <option value="bondWeight">Bond Weight Priority</option>
+              <option value="mass">Atomic Mass (Z)</option>
+              <option value="custom">Custom Order</option>
             </select>
           </div>
 
@@ -131,7 +148,13 @@ export class App {
             <button id="btn-quick-reset" class="btn-xs">Reset All</button>
           </div>
 
-          <h2 style="margin-top: 10px;">Modulation Matrix</h2>
+          <div class="mod-header-row">
+            <h2>Modulation Matrix</h2>
+            <div class="mod-header-btns">
+              <button id="btn-add-route" class="btn-xs" title="Add modulation route">+ Route</button>
+              <button id="btn-reset-matrix" class="btn-xs" title="Reset routes to default">↺ Reset</button>
+            </div>
+          </div>
           <div class="routes-list" id="routes-list"></div>
 
           <h2 style="margin-top: 10px;">Export</h2>
@@ -180,22 +203,32 @@ export class App {
   private updateAll(): void {
     const effectiveBpm = calculateBpm(this.baseBpm, this.temperature);
 
+    const computedOrder = computeOrderedSequence(
+      this.currentMolecule,
+      this.currentAnalysis,
+      this.orderStrategy,
+      this.customOrder
+    );
+
     this.currentPattern = buildMoleculePattern(this.currentMolecule, {
       mode: this.playbackMode,
       atomsPerBar: this.atomsPerBar,
       matrix: this.currentMatrix,
       temperature: this.temperature,
       atomVoiceOverrides: this.atomVoiceOverrides,
+      orderStrategy: this.orderStrategy,
+      customOrder: this.customOrder,
     });
 
-    // Render SVG with selection and badges
+    // Render SVG with selection, badges and computed sequence order
     this.svgView.selectedAtomIndex = this.selectedAtomIndex;
     this.svgView.render(
       this.currentMolecule,
       this.currentAnalysis,
       520,
       340,
-      this.atomVoiceOverrides
+      this.atomVoiceOverrides,
+      computedOrder
     );
 
     // Check excitation for each atom
@@ -234,6 +267,17 @@ export class App {
       return;
     }
 
+    const computedOrder = computeOrderedSequence(
+      this.currentMolecule,
+      this.currentAnalysis,
+      this.orderStrategy,
+      this.customOrder
+    );
+    const orderIdx = computedOrder.indexOf(this.selectedAtomIndex);
+    const orderRank = orderIdx >= 0 ? orderIdx + 1 : this.selectedAtomIndex + 1;
+    const bondCount = this.currentAnalysis.atomBondCounts?.[this.selectedAtomIndex] ?? 0;
+    const bondWeight = this.currentAnalysis.atomBondWeights?.[this.selectedAtomIndex] ?? 1;
+
     const currentVoice = this.atomVoiceOverrides[this.selectedAtomIndex] || 'default';
     const color = ELEMENT_COLORS[atom.element.symbol] || '#94a3b8';
 
@@ -246,7 +290,19 @@ export class App {
         <div class="atom-props">${atom.protons}p ${atom.neutrons}n ${atom.electrons}e</div>
       </div>
 
-      <div class="atom-voice-select-row">
+      <div class="atom-bond-info">
+        <span>Bonds: <b style="color: var(--accent-cyan);">${bondCount}</b></span>
+        <span>Weight: <b style="color: var(--accent-amber);">${bondWeight.toFixed(1)}</b></span>
+        <span>Valence: <b>${atom.typicalValence}</b></span>
+        <span>Step: <b style="color: var(--accent-amber);">#${orderRank}/${this.currentMolecule.atoms.length}</b></span>
+      </div>
+
+      <div class="atom-reorder-row">
+        <button id="btn-atom-earlier" class="btn-xs" ${orderIdx <= 0 ? 'disabled' : ''}>↑ Play Earlier</button>
+        <button id="btn-atom-later" class="btn-xs" ${orderIdx >= computedOrder.length - 1 ? 'disabled' : ''}>↓ Play Later</button>
+      </div>
+
+      <div class="atom-voice-select-row" style="margin-top: 6px;">
         <label for="select-atom-voice">Assigned Instrument / Voice</label>
         <select id="select-atom-voice">
           <option value="default" ${currentVoice === 'default' ? 'selected' : ''}>Default (Kick/Hat/Snare)</option>
@@ -266,6 +322,45 @@ export class App {
       this.atomVoiceOverrides[this.selectedAtomIndex] = val;
       this.updateAll();
     });
+
+    const btnEarlier = inspector.querySelector('#btn-atom-earlier') as HTMLButtonElement | null;
+    const btnLater = inspector.querySelector('#btn-atom-later') as HTMLButtonElement | null;
+
+    if (btnEarlier) {
+      btnEarlier.addEventListener('click', () => {
+        if (this.orderStrategy !== 'custom') {
+          this.customOrder = [...computedOrder];
+          this.orderStrategy = 'custom';
+          const sel = root.querySelector('#select-order-strategy') as HTMLSelectElement | null;
+          if (sel) sel.value = 'custom';
+        }
+        const idx = this.customOrder.indexOf(this.selectedAtomIndex);
+        if (idx > 0) {
+          const tmp = this.customOrder[idx - 1];
+          this.customOrder[idx - 1] = this.customOrder[idx];
+          this.customOrder[idx] = tmp;
+          this.updateAll();
+        }
+      });
+    }
+
+    if (btnLater) {
+      btnLater.addEventListener('click', () => {
+        if (this.orderStrategy !== 'custom') {
+          this.customOrder = [...computedOrder];
+          this.orderStrategy = 'custom';
+          const sel = root.querySelector('#select-order-strategy') as HTMLSelectElement | null;
+          if (sel) sel.value = 'custom';
+        }
+        const idx = this.customOrder.indexOf(this.selectedAtomIndex);
+        if (idx >= 0 && idx < this.customOrder.length - 1) {
+          const tmp = this.customOrder[idx + 1];
+          this.customOrder[idx + 1] = this.customOrder[idx];
+          this.customOrder[idx] = tmp;
+          this.updateAll();
+        }
+      });
+    }
   }
 
   private renderAtomPills(root: HTMLElement): void {
@@ -311,12 +406,35 @@ export class App {
     const tempVal = root.querySelector('#temp-val') as HTMLElement;
     const effectiveBpmLabel = root.querySelector('#effective-bpm') as HTMLElement;
     const selectMode = root.querySelector('#select-mode') as HTMLSelectElement;
+    const selectOrderStrategy = root.querySelector('#select-order-strategy') as HTMLSelectElement;
     const selectForm = root.querySelector('#select-form') as HTMLSelectElement;
     const inputApb = root.querySelector('#input-apb') as HTMLInputElement;
     const inputSmiles = root.querySelector('#input-smiles') as HTMLInputElement;
     const smilesError = root.querySelector('#smiles-error') as HTMLElement;
     const btnExportStrudel = root.querySelector('#btn-export-strudel') as HTMLButtonElement;
     const btnExportMidi = root.querySelector('#btn-export-midi') as HTMLButtonElement;
+
+    // Interactive Modulation Matrix header buttons
+    const btnAddRoute = root.querySelector('#btn-add-route') as HTMLButtonElement | null;
+    const btnResetMatrix = root.querySelector('#btn-reset-matrix') as HTMLButtonElement | null;
+
+    btnAddRoute?.addEventListener('click', () => {
+      this.currentMatrix.routes.push({
+        voice: 'kick',
+        dest: 'velocity',
+        source: 'bondWeight',
+      });
+      this.renderRoutes(root);
+      this.updateAll();
+    });
+
+    btnResetMatrix?.addEventListener('click', () => {
+      this.currentMatrix = {
+        routes: DEFAULT_MOD_MATRIX.routes.map(r => ({ ...r })),
+      };
+      this.renderRoutes(root);
+      this.updateAll();
+    });
 
     // Quick atom voice action buttons
     const btnQuickHHat = root.querySelector('#btn-quick-h-hat') as HTMLButtonElement;
@@ -397,6 +515,15 @@ export class App {
       this.updateAll();
     });
 
+    // Sequence Order Strategy change
+    selectOrderStrategy?.addEventListener('change', () => {
+      this.orderStrategy = selectOrderStrategy.value as OrderStrategy;
+      if (this.orderStrategy === 'custom' && this.customOrder.length !== this.currentMolecule.atoms.length) {
+        this.customOrder = this.currentMolecule.atoms.map((_, idx) => idx);
+      }
+      this.updateAll();
+    });
+
     // Form change
     selectForm.addEventListener('change', () => {
       this.formMode = selectForm.value as FormMode;
@@ -415,6 +542,7 @@ export class App {
         const mol = parseSmiles(inputSmiles.value);
         this.currentMolecule = mol;
         this.currentAnalysis = analyzeMolecule(mol);
+        this.customOrder = mol.atoms.map((_, idx) => idx);
         this.atomVoiceOverrides = {};
         this.selectedAtomIndex = 0;
         smilesError.style.display = 'none';
@@ -477,6 +605,7 @@ export class App {
 
         this.currentMolecule = parseSmiles(preset.smiles, preset.name);
         this.currentAnalysis = analyzeMolecule(this.currentMolecule);
+        this.customOrder = this.currentMolecule.atoms.map((_, idx) => idx);
         this.atomVoiceOverrides = {};
         this.selectedAtomIndex = 0;
         this.updateAll();
@@ -488,17 +617,84 @@ export class App {
 
   private renderRoutes(root: HTMLElement): void {
     const container = root.querySelector('#routes-list') as HTMLElement;
+    if (!container) return;
     container.innerHTML = '';
+
+    const VOICES = [
+      { value: 'kick', label: 'Kick' },
+      { value: 'snare', label: 'Snare' },
+      { value: 'hat', label: 'Hat' },
+      { value: 'clap', label: 'Clap' },
+      { value: 'rim', label: 'Rim' },
+      { value: 'proton', label: 'Proton' },
+      { value: 'neutron', label: 'Neutron' },
+      { value: 'electron.s1', label: 'Electr s1' },
+      { value: 'electron.s2', label: 'Electr s2' },
+      { value: 'electron.s3', label: 'Electr s3' },
+    ];
+
+    const DESTS: { value: ModDest; label: string }[] = [
+      { value: 'hits', label: 'hits' },
+      { value: 'velocity', label: 'velocity' },
+      { value: 'rotation', label: 'rotation' },
+      { value: 'steps', label: 'steps' },
+    ];
+
+    const SOURCES: { value: ModSource; label: string }[] = [
+      { value: 'bondWeight', label: 'Вес связи (W)' },
+      { value: 'bondCount', label: 'Связи (Bonds)' },
+      { value: 'typicalValence', label: 'Валентность' },
+      { value: 'valenceElectrons', label: 'Вал. e⁻' },
+      { value: 'protons', label: 'Протоны (Z)' },
+      { value: 'neutrons', label: 'Нейтроны (N)' },
+      { value: 'electrons', label: 'Все e⁻' },
+      { value: 'electronegativity', label: 'Электроотр.' },
+      { value: 'atomicMass', label: 'Масса' },
+      { value: 'ionizationEnergy', label: 'Ионизация' },
+    ];
 
     for (let i = 0; i < this.currentMatrix.routes.length; i++) {
       const route = this.currentMatrix.routes[i];
       const row = document.createElement('div');
-      row.className = 'route-row';
+      row.className = 'route-row-interactive';
+
+      const voiceOpts = VOICES.map(v => `<option value="${v.value}" ${route.voice === v.value ? 'selected' : ''}>${v.label}</option>`).join('');
+      const destOpts = DESTS.map(d => `<option value="${d.value}" ${route.dest === d.value ? 'selected' : ''}>${d.label}</option>`).join('');
+      const srcOpts = SOURCES.map(s => `<option value="${s.value}" ${route.source === s.value ? 'selected' : ''}>${s.label}</option>`).join('');
+
       row.innerHTML = `
-        <span style="font-weight: 600; color: var(--accent-cyan); width: 85px;">${route.voice}</span>
-        <span style="color: var(--text-muted); font-size: 0.75rem;">${route.dest}</span>
-        <span style="color: var(--accent-amber); font-weight: 500;">${route.source}</span>
+        <select class="mod-select voice-sel" title="Voice / Track">${voiceOpts}</select>
+        <select class="mod-select dest-sel" title="Destination Target">${destOpts}</select>
+        <span class="mod-arrow">←</span>
+        <select class="mod-select src-sel" title="Modulation Source">${srcOpts}</select>
+        <button class="btn-del-route" title="Remove route">✕</button>
       `;
+
+      const voiceSel = row.querySelector('.voice-sel') as HTMLSelectElement;
+      voiceSel.addEventListener('change', () => {
+        route.voice = voiceSel.value;
+        this.updateAll();
+      });
+
+      const destSel = row.querySelector('.dest-sel') as HTMLSelectElement;
+      destSel.addEventListener('change', () => {
+        route.dest = destSel.value as ModDest;
+        this.updateAll();
+      });
+
+      const srcSel = row.querySelector('.src-sel') as HTMLSelectElement;
+      srcSel.addEventListener('change', () => {
+        route.source = srcSel.value as ModSource;
+        this.updateAll();
+      });
+
+      const btnDel = row.querySelector('.btn-del-route') as HTMLButtonElement;
+      btnDel.addEventListener('click', () => {
+        this.currentMatrix.routes.splice(i, 1);
+        this.renderRoutes(root);
+        this.updateAll();
+      });
+
       container.appendChild(row);
     }
   }

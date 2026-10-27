@@ -74,5 +74,37 @@ describe('buildMoleculePattern', () => {
     const allEvents = pat.tracks.flatMap(t => t.events);
     expect(allEvents.some(e => e.atomIndex === 1)).toBe(false);
   });
+
+  it('supports customOrder and bondWeight order strategies in sequential mode', () => {
+    const ethanol = parseSmiles('CCO');
+    // Ethanol: atoms 0, 1 are C, atom 2 is O, atoms 3..8 are H
+
+    // Custom order: put O (atom 2) first
+    const customOrder = [2, 1, 0, 3, 4, 5, 6, 7, 8];
+    const patCustom = buildMoleculePattern(ethanol, {
+      mode: 'sequential',
+      orderStrategy: 'custom',
+      customOrder,
+      atomsPerBar: 1,
+    });
+
+    // First bar should contain events from atom 2 (O)
+    const firstBarEvents = patCustom.tracks.flatMap(t => t.events.filter(e => e.tick < 384));
+    expect(firstBarEvents.some(e => e.atomIndex === 2)).toBe(true);
+  });
+
+  it('scales event velocity with bond weight: bonded carbons sound weightier than hydrogens', () => {
+    const methane = parseSmiles('C'); // C with 4 H's
+    const pat = buildMoleculePattern(methane, { mode: 'overlay' });
+
+    const cKick = pat.tracks.find(t => t.voice === 'proton')?.events.find(e => e.atomIndex === 0);
+    const hKick = pat.tracks.find(t => t.voice === 'proton')?.events.find(e => e.atomIndex === 1);
+
+    expect(cKick).toBeDefined();
+    expect(hKick).toBeDefined();
+    // C has bond weight 6.0, H has bond weight 1.5 -> C velocity is higher
+    expect(cKick!.velocity).toBeGreaterThan(hKick!.velocity);
+  });
 });
+
 

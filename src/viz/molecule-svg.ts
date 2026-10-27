@@ -42,7 +42,8 @@ export class MoleculeSvgView {
     analysis: MolecularAnalysis,
     width: number = 520,
     height: number = 340,
-    voiceOverrides?: Record<number, string>
+    voiceOverrides?: Record<number, string>,
+    currentOrder?: readonly number[]
   ): void {
     this.container.innerHTML = '';
     this.atomGroups = [];
@@ -146,7 +147,7 @@ export class MoleculeSvgView {
       svg.appendChild(g);
     }
 
-    // Layer 3: Atoms with p/n/e labels, selection, badges, and Lewis dots
+    // Layer 3: Atoms with p/n/e labels, selection, badges, Lewis dots, and order tags
     for (let i = 0; i < mol.atoms.length; i++) {
       const atom = mol.atoms[i];
       const pt = this.coords[i];
@@ -155,6 +156,16 @@ export class MoleculeSvgView {
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.setAttribute('id', `atom-node-${i}`);
       g.style.cursor = 'pointer';
+
+      // Tooltip with bond weight and count
+      const bondWeight = analysis.atomBondWeights?.[i] ?? 1;
+      const bondCount = analysis.atomBondCounts?.[i] ?? 0;
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.textContent = `Atom #${i}: ${atom.element.name} (${atom.element.symbol})\nBonds: ${bondCount} (Weight: ${bondWeight.toFixed(1)})\nValence: ${atom.typicalValence}\nElectrons: ${atom.electrons} (Valence: ${atom.valenceElectrons})`;
+      g.appendChild(title);
+
+      // Node radius scaled by bond weight (more bonds/valence = visually heavier)
+      const radius = 14 + Math.min(8, bondWeight * 0.9);
 
       // Click to select atom
       g.addEventListener('click', (e) => {
@@ -167,7 +178,7 @@ export class MoleculeSvgView {
       const glow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       glow.setAttribute('cx', pt.x.toFixed(1));
       glow.setAttribute('cy', pt.y.toFixed(1));
-      glow.setAttribute('r', '26');
+      glow.setAttribute('r', (radius + 9).toFixed(1));
       glow.setAttribute('fill', 'none');
       glow.setAttribute('stroke', '#38bdf8');
       glow.setAttribute('stroke-width', '3');
@@ -179,7 +190,7 @@ export class MoleculeSvgView {
       const selRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       selRing.setAttribute('cx', pt.x.toFixed(1));
       selRing.setAttribute('cy', pt.y.toFixed(1));
-      selRing.setAttribute('r', '22');
+      selRing.setAttribute('r', (radius + 5).toFixed(1));
       selRing.setAttribute('fill', 'none');
       selRing.setAttribute('stroke', '#f59e0b');
       selRing.setAttribute('stroke-width', '2');
@@ -192,10 +203,10 @@ export class MoleculeSvgView {
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       circle.setAttribute('cx', pt.x.toFixed(1));
       circle.setAttribute('cy', pt.y.toFixed(1));
-      circle.setAttribute('r', '17');
+      circle.setAttribute('r', radius.toFixed(1));
       circle.setAttribute('fill', '#1e293b');
       circle.setAttribute('stroke', baseColor);
-      circle.setAttribute('stroke-width', '2.5');
+      circle.setAttribute('stroke-width', bondWeight >= 4 ? '3' : '2.2');
       g.appendChild(circle);
 
       // Symbol
@@ -205,7 +216,7 @@ export class MoleculeSvgView {
       sym.setAttribute('text-anchor', 'middle');
       sym.setAttribute('dominant-baseline', 'central');
       sym.setAttribute('fill', baseColor);
-      sym.setAttribute('font-size', '13px');
+      sym.setAttribute('font-size', radius >= 18 ? '13px' : '12px');
       sym.setAttribute('font-weight', 'bold');
       sym.setAttribute('font-family', 'system-ui, sans-serif');
       sym.textContent = atom.element.symbol;
@@ -214,7 +225,7 @@ export class MoleculeSvgView {
       // Subscript p/n/e label
       const sub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       sub.setAttribute('x', pt.x.toFixed(1));
-      sub.setAttribute('y', (pt.y + 24).toFixed(1));
+      sub.setAttribute('y', (pt.y + radius + 11).toFixed(1));
       sub.setAttribute('text-anchor', 'middle');
       sub.setAttribute('fill', '#94a3b8');
       sub.setAttribute('font-size', '9px');
@@ -228,7 +239,7 @@ export class MoleculeSvgView {
         const badgeInfo = VOICE_BADGES[overrideVoice] || { label: overrideVoice.slice(0, 3).toUpperCase(), color: '#38bdf8' };
         const badgeBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         badgeBg.setAttribute('x', (pt.x - 14).toFixed(1));
-        badgeBg.setAttribute('y', (pt.y - 25).toFixed(1));
+        badgeBg.setAttribute('y', (pt.y - radius - 10).toFixed(1));
         badgeBg.setAttribute('width', '28');
         badgeBg.setAttribute('height', '12');
         badgeBg.setAttribute('rx', '3');
@@ -238,7 +249,7 @@ export class MoleculeSvgView {
 
         const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         badgeText.setAttribute('x', pt.x.toFixed(1));
-        badgeText.setAttribute('y', (pt.y - 16).toFixed(1));
+        badgeText.setAttribute('y', (pt.y - radius - 1).toFixed(1));
         badgeText.setAttribute('text-anchor', 'middle');
         badgeText.setAttribute('fill', '#0f172a');
         badgeText.setAttribute('font-size', '8px');
@@ -248,11 +259,40 @@ export class MoleculeSvgView {
         g.appendChild(badgeText);
       }
 
+      // Order Rank Badge (#1, #2, ...)
+      if (currentOrder && currentOrder.length > 0) {
+        const orderRank = currentOrder.indexOf(i) + 1;
+        if (orderRank > 0) {
+          const badgeWidth = orderRank >= 10 ? 20 : 16;
+          const orderBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          orderBg.setAttribute('x', (pt.x - radius - badgeWidth + 2).toFixed(1));
+          orderBg.setAttribute('y', (pt.y - radius - 4).toFixed(1));
+          orderBg.setAttribute('width', `${badgeWidth}`);
+          orderBg.setAttribute('height', '13');
+          orderBg.setAttribute('rx', '3');
+          orderBg.setAttribute('fill', '#0f172a');
+          orderBg.setAttribute('stroke', '#f59e0b');
+          orderBg.setAttribute('stroke-width', '1');
+          g.appendChild(orderBg);
+
+          const orderText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          orderText.setAttribute('x', (pt.x - radius - badgeWidth / 2 + 2).toFixed(1));
+          orderText.setAttribute('y', (pt.y - radius + 5.5).toFixed(1));
+          orderText.setAttribute('text-anchor', 'middle');
+          orderText.setAttribute('fill', '#f59e0b');
+          orderText.setAttribute('font-size', '8px');
+          orderText.setAttribute('font-weight', 'bold');
+          orderText.setAttribute('font-family', 'monospace');
+          orderText.textContent = `#${orderRank}`;
+          g.appendChild(orderText);
+        }
+      }
+
       // Lewis valence dots around atom circle
       const vDots = Math.min(8, atom.valenceElectrons);
       for (let d = 0; d < vDots; d++) {
         const dotAngle = (2 * Math.PI * d) / vDots;
-        const dotR = 20.5;
+        const dotR = radius + 3.5;
         const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         dot.setAttribute('cx', (pt.x + dotR * Math.cos(dotAngle)).toFixed(1));
         dot.setAttribute('cy', (pt.y + dotR * Math.sin(dotAngle)).toFixed(1));
@@ -264,8 +304,8 @@ export class MoleculeSvgView {
       // Charge label if non-zero
       if (atom.charge !== 0) {
         const chg = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        chg.setAttribute('x', (pt.x + 14).toFixed(1));
-        chg.setAttribute('y', (pt.y - 12).toFixed(1));
+        chg.setAttribute('x', (pt.x + radius - 2).toFixed(1));
+        chg.setAttribute('y', (pt.y - radius + 2).toFixed(1));
         chg.setAttribute('fill', atom.charge > 0 ? '#38bdf8' : '#f87171');
         chg.setAttribute('font-size', '10px');
         chg.setAttribute('font-weight', 'bold');

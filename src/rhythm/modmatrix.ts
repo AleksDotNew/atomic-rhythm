@@ -7,12 +7,13 @@ export type ModSource =
   | 'electronsInShell'
   | 'shellCount'
   | 'period'
-  | 'group'
   | 'valenceElectrons'
   | 'typicalValence'
   | 'electronegativity'
   | 'atomicMass'
-  | 'ionizationEnergy';
+  | 'ionizationEnergy'
+  | 'bondCount'
+  | 'bondWeight';
 
 export type ModDest = 'hits' | 'steps' | 'rotation' | 'velocity';
 
@@ -28,7 +29,12 @@ export interface ModulationMatrix {
   readonly routes: readonly ModRoute[];
 }
 
-export function evaluateRoute(route: ModRoute, atom: AtomConfig): number {
+export function evaluateRoute(
+  route: ModRoute,
+  atom: AtomConfig,
+  bondCount?: number,
+  bondWeight?: number
+): number {
   let rawValue = 0;
   switch (route.source) {
     case 'protons':
@@ -68,6 +74,12 @@ export function evaluateRoute(route: ModRoute, atom: AtomConfig): number {
       break;
     case 'ionizationEnergy':
       rawValue = atom.element.ionizationEnergy1;
+      break;
+    case 'bondCount':
+      rawValue = bondCount ?? 0;
+      break;
+    case 'bondWeight':
+      rawValue = bondWeight ?? 0;
       break;
   }
 

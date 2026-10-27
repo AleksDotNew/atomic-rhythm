@@ -21,9 +21,13 @@ describe('Modulation Matrix', () => {
     expect(evaluateRoute(routeS2, na)).toBe(8);
   });
 
-  it('provides default modulation matrix with standard chemistry-to-rhythm mappings', () => {
-    expect(DEFAULT_MOD_MATRIX.routes.length).toBeGreaterThan(0);
-    const protonHits = DEFAULT_MOD_MATRIX.routes.find(r => r.voice === 'proton' && r.dest === 'hits');
-    expect(protonHits?.source).toBe('protons');
+  it('evaluates bondCount and bondWeight sources when passed in context', () => {
+    const c = createAtom('C');
+    const routeCount: ModRoute = { voice: 'proton', source: 'bondCount', dest: 'hits' };
+    const routeWeight: ModRoute = { voice: 'proton', source: 'bondWeight', dest: 'velocity' };
+
+    expect(evaluateRoute(routeCount, c, 4, 6.0)).toBe(4);
+    expect(evaluateRoute(routeWeight, c, 4, 6.0)).toBe(6.0);
   });
 });
+

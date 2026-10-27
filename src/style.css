@@ -271,22 +271,92 @@ main.dashboard {
 }
 
 /* Right Panel: Modulation & Voice Mapping */
+.mod-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 8px;
+}
+
+.mod-header-row h2 {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.mod-header-btns {
+  display: flex;
+  gap: 6px;
+}
+
 .routes-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 340px;
+  gap: 6px;
+  max-height: 260px;
   overflow-y: auto;
+  padding-right: 2px;
 }
 
-.route-row {
+.route-row-interactive {
+  display: grid;
+  grid-template-columns: 82px 76px 12px 1fr 22px;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  transition: border-color 0.15s ease;
+}
+
+.route-row-interactive:hover {
+  border-color: #475569;
+}
+
+.mod-select {
+  background: #0f172a;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 4px 4px;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  width: 100%;
+  cursor: pointer;
+}
+
+.mod-select:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+}
+
+.mod-arrow {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-align: center;
+  user-select: none;
+}
+
+.btn-del-route {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-  background: var(--bg-card);
-  border-radius: 6px;
-  font-size: 0.8rem;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-del-route:hover {
+  color: var(--accent-pink);
+  background: rgba(244, 63, 94, 0.15);
 }
 
 .export-actions {
@@ -305,6 +375,35 @@ main.dashboard {
   border-radius: 8px;
   padding: 10px;
   margin-bottom: 8px;
+}
+
+.atom-bond-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 5px 8px;
+  background: #0f172a;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border: 1px solid #1e293b;
+}
+
+.atom-reorder-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.atom-reorder-row .btn-xs {
+  flex: 1;
+  text-align: center;
+}
+
+.atom-reorder-row .btn-xs:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: transparent;
 }
 
 .atom-card-header {

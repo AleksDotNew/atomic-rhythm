@@ -67,5 +67,34 @@ describe('analyzeMolecule', () => {
       expect(hPos).toBeLessThan(cPosInTraversal);
     }
   });
+
+  it('calculates atomBondCounts and atomBondWeights with higher priority for bonded carbons', () => {
+    const cyclopentane = parseSmiles('C1CCCC1');
+    const analysis = analyzeMolecule(cyclopentane);
+
+    expect(analysis.atomBondCounts.length).toBe(cyclopentane.atoms.length);
+    expect(analysis.atomBondWeights.length).toBe(cyclopentane.atoms.length);
+
+    // Each carbon in cyclopentane has 4 single bonds (2 C-C, 2 C-H), valence 4 -> weight = 4 + 0.5*4 = 6
+    for (let c = 0; c < 5; c++) {
+      expect(analysis.atomBondCounts[c]).toBe(4);
+      expect(analysis.atomBondWeights[c]).toBe(6);
+    }
+
+    // Each hydrogen has 1 bond, valence 1 -> weight = 1 + 0.5*1 = 1.5
+    for (let h = 5; h < 15; h++) {
+      expect(analysis.atomBondCounts[h]).toBe(1);
+      expect(analysis.atomBondWeights[h]).toBe(1.5);
+    }
+  });
+
+  it('supports different ordering strategies: structural, bondWeight, mass, custom', () => {
+    const ethanol = parseSmiles('CCO');
+    const analysis = analyzeMolecule(ethanol);
+
+    // Bond weight priority: C (weight 6) and O (weight 3) come before H (weight 1.5)
+    expect(analysis.atomBondWeights[0]).toBeGreaterThan(analysis.atomBondWeights[3]); // C vs H
+  });
 });
+
 

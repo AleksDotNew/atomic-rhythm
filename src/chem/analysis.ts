@@ -29,12 +29,16 @@ export interface StructuralUnit {
   };
 }
 
+export type OrderStrategy = 'structural' | 'bondWeight' | 'mass' | 'custom';
+
 export interface MolecularAnalysis {
   readonly rings: readonly RingInfo[];
   readonly bonds: readonly AnalyzedBond[];
   readonly functionalGroups: readonly FunctionalGroup[];
   readonly traversalOrder: readonly number[]; // Atom index sequence
   readonly structuralUnits: readonly StructuralUnit[];
+  readonly atomBondCounts: readonly number[];
+  readonly atomBondWeights: readonly number[];
 }
 
 export function analyzeMolecule(mol: Molecule): MolecularAnalysis {
@@ -43,6 +47,7 @@ export function analyzeMolecule(mol: Molecule): MolecularAnalysis {
   const functionalGroups = findFunctionalGroups(mol);
   const structuralUnits = computeStructuralUnits(mol, rings);
   const traversalOrder = computeTraversalFromUnits(mol, structuralUnits);
+  const { counts, weights } = computeBondWeightsAndCounts(mol);
 
   return {
     rings,
@@ -50,7 +55,57 @@ export function analyzeMolecule(mol: Molecule): MolecularAnalysis {
     functionalGroups,
     traversalOrder,
     structuralUnits,
+    atomBondCounts: counts,
+    atomBondWeights: weights,
   };
+}
+
+function computeBondWeightsAndCounts(mol: Molecule): { counts: number[]; weights: number[] } {
+  const counts = new Array(mol.atoms.length).fill(0);
+  const bondSums = new Array(mol.atoms.length).fill(0);
+
+  for (const b of mol.bonds) {
+    if (b.atomA < counts.length) counts[b.atomA]++;
+    if (b.atomB < counts.length) counts[b.atomB]++;
+    const orderVal = b.isAromatic ? 1.5 : b.order;
+    if (b.atomA < bondSums.length) bondSums[b.atomA] += orderVal;
+    if (b.atomB < bondSums.length) bondSums[b.atomB] += orderVal;
+  }
+
+  const weights = mol.atoms.map((atom, idx) => {
+    const bondSum = bondSums[idx];
+    const valence = atom.typicalValence || 1;
+    return bondSum + 0.5 * valence;
+  });
+
+  return { counts, weights };
+}
+
+export function computeOrderedSequence(
+  mol: Molecule,
+  analysis: MolecularAnalysis,
+  strategy: OrderStrategy = 'structural',
+  customOrder?: readonly number[]
+): number[] {
+  if (strategy === 'custom' && customOrder && customOrder.length === mol.atoms.length) {
+    return [...customOrder];
+  }
+
+  if (strategy === 'bondWeight') {
+    return Array.from({ length: mol.atoms.length }, (_, i) => i).sort((a, b) => {
+      const diff = analysis.atomBondWeights[b] - analysis.atomBondWeights[a];
+      if (Math.abs(diff) > 0.001) return diff;
+      return mol.atoms[b].element.atomicMass - mol.atoms[a].element.atomicMass;
+    });
+  }
+
+  if (strategy === 'mass') {
+    return Array.from({ length: mol.atoms.length }, (_, i) => i).sort(
+      (a, b) => mol.atoms[b].element.atomicMass - mol.atoms[a].element.atomicMass
+    );
+  }
+
+  return [...analysis.traversalOrder];
 }
 
 function analyzeBonds(mol: Molecule): AnalyzedBond[] {

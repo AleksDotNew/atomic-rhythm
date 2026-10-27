@@ -9,14 +9,18 @@ export function buildAtomPattern(
   atom: AtomConfig,
   matrix: ModulationMatrix = DEFAULT_MOD_MATRIX,
   atomIndex?: number,
-  segmentTicks: number = 16 * (PPQ / 4) // 1 bar of 4/4
+  segmentTicks: number = 16 * (PPQ / 4), // 1 bar of 4/4
+  bondCount?: number,
+  bondWeight?: number
 ): Track[] {
   const tracks: Track[] = [];
+
+  const weightScale = bondWeight !== undefined && bondWeight > 0 ? 0.75 + 0.25 * Math.min(1.0, bondWeight / 6.0) : 1.0;
 
   // Helper to find configured route
   const getHits = (voice: string, fallback: number): number => {
     const route = matrix.routes.find(r => r.voice === voice && r.dest === 'hits');
-    return route ? evaluateRoute(route, atom) : fallback;
+    return route ? evaluateRoute(route, atom, bondCount, bondWeight) : fallback;
   };
 
   // 1. Proton track (Kick)
@@ -30,7 +34,7 @@ export function buildAtomPattern(
     if (protonEuclid.pattern[s]) {
       protonEvents.push({
         tick: Math.round((s * protonCycleTicks) / protonSteps),
-        velocity: Math.min(1.0, 0.9 * protonEuclid.velocityScale),
+        velocity: Math.min(1.0, 0.9 * protonEuclid.velocityScale * weightScale),
         durationTicks: 12,
         articulation: 'normal',
         atomIndex,
@@ -55,7 +59,7 @@ export function buildAtomPattern(
     if (neutronEuclid.pattern[s]) {
       neutronEvents.push({
         tick: Math.round((s * neutronCycleTicks) / neutronSteps),
-        velocity: Math.min(1.0, 0.75 * neutronEuclid.velocityScale),
+        velocity: Math.min(1.0, 0.75 * neutronEuclid.velocityScale * weightScale),
         durationTicks: 8,
         articulation: 'normal',
         atomIndex,
@@ -92,7 +96,7 @@ export function buildAtomPattern(
       if (shellEuclid.pattern[s]) {
         shellEvents.push({
           tick: Math.round((s * shellCycleTicks) / shellSteps),
-          velocity: Math.min(1.0, 0.85 * shellEuclid.velocityScale),
+          velocity: Math.min(1.0, 0.85 * shellEuclid.velocityScale * weightScale),
           durationTicks: 12,
           articulation: 'normal',
           atomIndex,
