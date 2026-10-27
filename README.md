@@ -1,37 +1,193 @@
-# Atomic Rhythm
+# Atomic Rhythm ⚛️🥁
 
-Single-page web application for algorithmic rhythm generation derived from chemical and atomic structures.
+> Генератор полиритмических паттернов на основе физико-химических свойств атомов и молекул.  
+> Single-page web application for algorithmic rhythm generation derived from chemical and atomic structures.
 
-## Overview
+---
 
-Atomic Rhythm maps physics and chemistry into polyrhythmic structures:
-- **Protons ($Z$):** Kick drum (Bjorklund Euclidean rhythm)
-- **Neutrons ($N = A - Z$):** Closed hi-hat
-- **Electrons ($e = Z - \text{charge}$):** Snare / claps across quantum shells ($K, L, M, N...$), creating polymetric layers
-- **Bonds:** Flam (double bond), Roll (triple bond), Aromatic accent, Ionic swing
-- **Motifs:** Benzene 6/8 polyrhythm, functional groups (-OH, -NH₂, -COOH, C=O)
-- **Thermodynamic Excitation:** Raising temperature accelerates BPM and excites valence electrons to higher shells, triggering musical drum fills
-- **Outputs:** Real-time Web Audio drum synthesizer, Strudel mini-notation clipboard export, and Standard MIDI File (`.mid`) download.
+## 📑 Оглавление / Table of Contents
+1. [Быстрый запуск без установки (Zero-Setup)](#-быстрый-запуск-без-установки-zero-setup)
+2. [Установка и запуск из исходного кода (Development)](#-установка-и-запуск-из-исходного-кода-development)
+3. [Как работает физико-музыкальная модель](#-как-работает-физико-музыкальная-модель)
+4. [Инструкция по использованию интерфейса](#-инструкция-по-использованию-интерфейса)
+5. [Архитектура и структура проекта](#-архитектура-и-структура-проекта)
+6. [Экспорт и интеграции](#-экспорт-и-интеграции)
+7. [Документация и спецификации](#-документация-и-спецификации)
 
-## Running Locally
+---
 
-### Option 1: Standalone HTML (Zero Dependencies)
-Simply open `dist/index.html` directly in any modern browser:
+## 🚀 Быстрый запуск без установки (Zero-Setup)
+
+Приложение собрано в виде **полностью автономного одного файла** `dist/index.html` (51 КБ), включающего весь HTML, CSS, JavaScript, базу элементов и синтезатор.
+
+Для запуска **не требуются** серверы, базы данных, Node.js или интернет-соединение:
+
+### macOS
 ```bash
 open dist/index.html
 ```
-No web server, daemons, or internet connection required.
+*Или дважды кликните по файлу `dist/index.html` в Finder.*
 
-### Option 2: Development & Testing
+### Linux
 ```bash
-# Run test suite (48 unit tests)
-npm test
-
-# Build single-file production bundle
-npm run build
+xdg-open dist/index.html
 ```
 
-## Documentation & Skill
-- [Design Spec](docs/superpowers/specs/2026-10-27-atomic-rhythm-design.md)
-- [Implementation Plan](docs/superpowers/plans/2026-10-27-atomic-rhythm.md)
-- [Agent Skill: Atomic Rhythm Mapping](.agents/skills/atomic-rhythm-mapping/SKILL.md)
+### Windows
+```cmd
+start dist/index.html
+```
+
+> **Примечание:** Приложение без ограничений работает по прямому локальному протоколу `file://`.
+
+---
+
+## 🛠 Установка и запуск из исходного кода (Development)
+
+### Системные требования
+- **Node.js**: версия 18.0.0 или новее
+- **npm**: версия 8.0.0 или новее
+- Современный браузер с поддержкой Web Audio API (Chrome, Safari, Firefox, Edge)
+
+### Шаг 1: Клонирование репозитория
+```bash
+git clone https://github.com/AleksDotNew/atomic-rhythm.git
+cd atomic-rhythm
+```
+
+### Шаг 2: Установка зависимостей
+```bash
+npm install
+```
+
+### Шаг 3: Запуск сервера разработки
+```bash
+npm run dev
+```
+После запуска консоль выведет локальный адрес (обычно `http://localhost:5173/`). Откройте его в браузере. Поддерживается Hot Module Replacement (HMR) при редактировании файлов.
+
+### Дополнительные команды
+- **Запуск тестов (Vitest, 48 тестов):**
+  ```bash
+  npm test
+  ```
+- **Сборка production standalone HTML:**
+  ```bash
+  npm run build
+  ```
+  *(Результат сборки помещается в `dist/index.html`)*
+- **Локальный просмотр собранной версии:**
+  ```bash
+  npm run preview
+  ```
+
+---
+
+## 🔬 Как работает физико-музыкальная модель
+
+Каждый химический элемент преобразуется в полиритмическую ячейку, а молекулярные связи определяют артикуляцию и переходы:
+
+| Химический параметр | Музыкальный инструмент / Свойство | Математическая модель |
+| :--- | :--- | :--- |
+| **Протоны ($Z$)** | **Kick (Бочка)** | Алгоритм Бьёрклунда (Евклидов ритм $E(k, 16)$). Для тяжелых элементов при переполнении шагов ($k > 16$) плотность насыщается, а избыток масштабирует velocity. |
+| **Нейтроны ($N = A - Z$)** | **Closed Hi-Hat (Хэт)** | Евклидов ритм $E(N \bmod 16, 16)$ с циклическим фазовым сдвигом (rotation) на период элемента. |
+| **Электроны ($e^-$)** | **Snare / Clap** | Распределение по квантовым оболочкам ($K, L, M, N...$) по правилу Клечковского-Маделунга $(n+l)$. Каждая оболочка звучит в своём шаговом разрешении (16, 12, 20...), создавая естественные полиметры. |
+| **Одинарная связь (–)** | Стандартный шаг | Ровные длительности между соседними атомами. |
+| **Двойная связь (=)** | **Flam (Форшлаг)** | Двойной быстрый удар со смещением в 12 тиков (PPQ=96) перед основным ударом. |
+| **Тройная связь (≡)** | **Roll (Дробь)** | Тройная дробь со сдвигом фазы (триольный паттерн). |
+| **Ароматическая связь (:)** | **Aromatic Accent** | Акцент (+35% к velocity) на электронах сопряженного кольца. |
+| **Ионная связь ($\Delta\chi > 1.7$)** | **Ionic Swing** | Микротайминг со сдвигом на 18 тиков для имитации поляризации заряда. |
+| **Бензольное кольцо** | **Полиметрия 6/8** | Шестидольный кольцевой грув, контрастирующий с базовым размером 4/4. |
+| **Функциональные группы** | **Синкопы и акценты** | Специальные акценты для спиртовых (-OH), аминных (-NH₂), карбоксильных (-COOH) и карбонильных (C=O) групп. |
+| **Температура ($T$)** | **BPM & Квантовые переходы** | Рост температуры ускоряет темп ($\Delta \text{BPM} \propto \sqrt{T}$). При превышении пороговой энергии ионизации электроны возбуждаются на верхние уровни, генерируя сбивки (**drum fills**) в 4-м такте. |
+
+---
+
+## 🎛 Инструкция по использованию интерфейса
+
+1. **Chemical Input & Presets:**
+   - Выберите готовую молекулу из списка пресетов: *Вода ($H_2O$), Этанол, Бензол, Кофеин, Аспирин, Глюкоза, АТФ, Метан, Серная кислота...*
+   - Или введите любую валидную формулу в нотации **SMILES** (например, `c1ccccc1` для бензола или `CC(=O)Oc1ccccc1C(=O)O` для аспирина) и нажмите **Load**.
+2. **Transport Bar:**
+   - **Play / Stop:** Запуск и остановка синтезатора в реальном времени.
+   - **BPM:** Регулировка базового темпа (40 – 240 BPM).
+   - **Swing:** Степень свинга/микротайминга (0 – 100%).
+   - **Temp ($T$):** Ползунок температуры (0 K – 1000 K). Повысьте температуру, чтобы услышать возбужденные квантовые переходы и барабанные сбивки!
+3. **Режимы формы (Playback Form):**
+   - **Loop:** Одновременное наложение всех атомов молекулы в единый монолитный полиритмический грув.
+   - **Sequential:** Пошаговая сборка молекулы: сначала звучит первый атом, затем ковалентно привязывается второй, третий и т.д.
+4. **Визуализация молекулы:**
+   - Векторный 2D граф с физической силовой укладкой (force-directed layout).
+   - Подписанные протоны ($p^+$), нейтроны ($n^0$), электроны ($e^-$) и валентные точки Льюиса для каждого атома.
+   - Интерактивная подсветка и визуализация термического возбуждения.
+5. **Пошаговый секвенсор (Sequencer Grid):**
+   - Визуализация дорожек инструментов в реальном времени с движущимся плейхедом (Live Playhead).
+
+---
+
+## 💾 Экспорт и интеграции
+
+- **Copy Strudel:**
+  Копирует сгенерированный паттерн в формате мини-нотации [Strudel REPL](https://strudel.cc) в буфер обмена. Можно сразу вставить в веб-редактор Strudel и продолжить лайвкодинг.
+- **Export MIDI:**
+  Скачивает стандартный файл **Standard MIDI File (`.mid` Type 1)** с квантованием 96 PPQ и разделением по стандартным General MIDI нотам ударных (Note 36 = Kick, Note 38 = Snare, Note 42 = Closed Hat, Note 39 = Clap, Note 37 = Side Stick). Файл готов к импорту в любую DAW (Ableton Live, FL Studio, Logic Pro, Reaper).
+
+---
+
+## 📂 Архитектура и структура проекта
+
+```
+atomic-rhythm/
+├── dist/
+│   └── index.html               # Автономный production бандл (Single-File, 51 KB)
+├── src/
+│   ├── chem/
+│   │   ├── elements.ts          # База 118 химических элементов IUPAC
+│   │   ├── atom.ts              # Модель атома, изотопы, оболочки (n+l)
+│   │   ├── molecule.ts          # Граф молекулы и химические связи
+│   │   ├── smiles.ts            # Парсер SMILES нотации с кольцами и ветвями
+│   │   ├── analysis.ts          # Поиск циклов (SSSR) и функциональных групп
+│   │   └── presets.ts           # Коллекция химических пресетов
+│   ├── rhythm/
+│   │   ├── euclid.ts            # Алгоритм Бьёрклунда для евклидовых ритмов
+│   │   ├── ir.ts                # Промежуточное представление Rhythm IR (PPQ=96)
+│   │   ├── modmatrix.ts         # Настраиваемая матрица модуляции
+│   │   ├── atom-pattern.ts      # Генерация партий отдельного атома
+│   │   ├── motifs.ts            # 6/8 мотивы бензола и функциональных групп
+│   │   ├── excitation.ts        # Термодинамическое возбуждение и drum fills
+│   │   ├── form.ts              # Структуры формы (Loop / Sequential)
+│   │   └── molecule-pattern.ts  # Сборщик паттерна всей молекулы
+│   ├── audio/
+│   │   ├── synth.ts             # Web Audio процедурный синтезатор ударных
+│   │   └── scheduler.ts         # Look-ahead планировщик тайминга (25 мс)
+│   ├── viz/
+│   │   ├── layout.ts            # 2D силовая укладка молекулярного графа
+│   │   ├── molecule-svg.ts      # Векторный рендерер молекулы с p/n/e
+│   │   └── sequencer-grid.ts    # Сетка секвенсора с плейхедом
+│   ├── export/
+│   │   ├── strudel.ts           # Генератор мини-нотации Strudel
+│   │   └── midi.ts              # Генератор бинарных MIDI файлов (Type 1)
+│   ├── storage/
+│   │   └── db.ts                # IndexedDB хранилище пользовательских настроек
+│   ├── ui/
+│   │   └── app.ts               # Управление DOM, формами и связывание компонентов
+│   ├── main.ts                  # Точка входа в приложение
+│   └── style.css                # Адаптивные стили и темная тема
+├── test/                        # 48 модульных тестов Vitest
+├── docs/                        # Архитектурная спецификация и план разработки
+└── .agents/skills/              # Скилл агента по физико-музыкальному маппингу
+```
+
+---
+
+## 📚 Документация и спецификации
+
+- 📖 [Архитектурная спецификация (Design Spec)](docs/superpowers/specs/2026-10-27-atomic-rhythm-design.md)
+- 📋 [План разработки и реализации (Implementation Plan)](docs/superpowers/plans/2026-10-27-atomic-rhythm.md)
+- 🧠 [Agent Skill: Atomic Rhythm Mapping](.agents/skills/atomic-rhythm-mapping/SKILL.md)
+
+---
+
+## 📄 Лицензия
+
+MIT License © 2026 AleksDotNew
