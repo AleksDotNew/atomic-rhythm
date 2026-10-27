@@ -270,6 +270,55 @@ main.dashboard {
   overflow-x: auto;
 }
 
+/* Sequencer Step & Part Highlighting */
+.seq-step {
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.12s ease;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.seq-step.step-highlight-active {
+  box-shadow: 0 0 10px var(--accent-cyan), 0 0 2px #ffffff !important;
+  border: 1.5px solid #ffffff !important;
+  transform: scale(1.22);
+  z-index: 2;
+  opacity: 1 !important;
+}
+
+.seq-step.step-part-column {
+  background-color: rgba(56, 189, 248, 0.14) !important;
+  opacity: 0.9 !important;
+}
+
+.seq-step.step-dimmed {
+  opacity: 0.25 !important;
+  filter: grayscale(40%);
+}
+
+.seq-step.seq-playhead-active {
+  outline: 2px solid #ffffff;
+  outline-offset: 1px;
+  filter: brightness(1.35);
+  z-index: 3;
+}
+
+.seq-step.step-highlight-active.seq-playhead-active {
+  outline: 2px solid var(--accent-amber);
+  outline-offset: 1px;
+  filter: brightness(1.5);
+}
+
+.seq-part-header-active {
+  background: rgba(56, 189, 248, 0.25) !important;
+  color: #38bdf8 !important;
+  border-radius: 4px;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
+}
+
 /* Right Panel: Modulation & Voice Mapping */
 .mod-header-row {
   display: flex;

@@ -31,6 +31,9 @@ export class SequencerGridView {
   private container: HTMLElement;
   private pattern: Pattern | null = null;
   private stepElements: HTMLElement[][] = [];
+  private headerStepElements: HTMLElement[] = [];
+  private currentlyHighlightedAtoms: number[] | null = null;
+  public onStepClick?: (atomIndex: number) => void;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -40,6 +43,7 @@ export class SequencerGridView {
     this.pattern = pattern;
     this.container.innerHTML = '';
     this.stepElements = [];
+    this.headerStepElements = [];
 
     const wrapper = document.createElement('div');
     wrapper.className = 'sequencer-wrapper';
@@ -82,6 +86,7 @@ export class SequencerGridView {
       stepHeader.style.fontSize = '9px';
       stepHeader.style.textAlign = 'center';
       stepHeader.style.fontFamily = 'monospace';
+      stepHeader.style.transition = 'all 0.12s ease';
 
       const isPartStart = s % 16 === 0;
       const partNum = Math.floor(s / 16) + 1;
@@ -103,6 +108,7 @@ export class SequencerGridView {
       }
 
       headerRow.appendChild(stepHeader);
+      this.headerStepElements.push(stepHeader);
     }
     wrapper.appendChild(headerRow);
 
@@ -146,13 +152,11 @@ export class SequencerGridView {
         const step = document.createElement('div');
         step.className = 'seq-step';
         step.dataset.step = `${s}`;
-        step.style.width = '16px';
-        step.style.minWidth = '16px';
-        step.style.height = '16px';
-        step.style.borderRadius = '3px';
-        step.style.transition = 'all 0.08s ease';
 
         const hit = hitsMap.get(s);
+        step.dataset.atomIndex = hit?.atomIndex !== undefined ? `${hit.atomIndex}` : '';
+        step.dataset.part = `${Math.floor(s / 16) + 1}`;
+
         const isDownbeat = s % 4 === 0;
 
         if (hit) {
@@ -161,6 +165,12 @@ export class SequencerGridView {
           const atomLabel = hit.atomIndex !== undefined ? `Atom #${hit.atomIndex}` : '';
           const artLabel = hit.articulation !== 'normal' ? ` [${hit.articulation}]` : '';
           step.title = `Step ${s + 1}${artLabel} ${atomLabel}`.trim();
+
+          if (hit.atomIndex !== undefined) {
+            step.addEventListener('click', () => {
+              this.onStepClick?.(hit.atomIndex!);
+            });
+          }
         } else {
           step.style.background = isDownbeat ? '#334155' : '#1e293b';
         }
@@ -180,6 +190,85 @@ export class SequencerGridView {
     }
 
     this.container.appendChild(wrapper);
+
+    // Reapply highlight if present
+    if (this.currentlyHighlightedAtoms && this.currentlyHighlightedAtoms.length > 0) {
+      this.highlightAtoms(this.currentlyHighlightedAtoms);
+    }
+  }
+
+  highlightAtom(atomIndex: number | null): void {
+    this.highlightAtoms(atomIndex !== null ? [atomIndex] : null);
+  }
+
+  highlightAtoms(atomIndices: number[] | null): void {
+    this.currentlyHighlightedAtoms = atomIndices;
+    if (!this.pattern) return;
+    const stepTicks = PPQ / 4; // 24 ticks
+
+    if (!atomIndices || atomIndices.length === 0) {
+      for (const headerEl of this.headerStepElements) {
+        headerEl.classList.remove('seq-part-header-active');
+      }
+      for (let t = 0; t < this.stepElements.length; t++) {
+        for (let s = 0; s < this.stepElements[t].length; s++) {
+          const el = this.stepElements[t][s];
+          el.classList.remove('step-highlight-active', 'step-part-column', 'step-dimmed');
+        }
+      }
+      return;
+    }
+
+    const atomSet = new Set(atomIndices);
+    const targetSteps = new Set<number>();
+    const targetParts = new Set<number>();
+
+    for (const track of this.pattern.tracks) {
+      for (const evt of track.events) {
+        if (evt.atomIndex !== undefined && atomSet.has(evt.atomIndex)) {
+          const s = Math.round(evt.tick / stepTicks);
+          targetSteps.add(s);
+          const partNum = Math.floor(s / 16) + 1;
+          targetParts.add(partNum);
+        }
+      }
+    }
+
+    for (let s = 0; s < this.headerStepElements.length; s++) {
+      const headerEl = this.headerStepElements[s];
+      const partNum = Math.floor(s / 16) + 1;
+      if (targetParts.has(partNum)) {
+        headerEl.classList.add('seq-part-header-active');
+      } else {
+        headerEl.classList.remove('seq-part-header-active');
+      }
+    }
+
+    for (let t = 0; t < this.stepElements.length; t++) {
+      for (let s = 0; s < this.stepElements[t].length; s++) {
+        const el = this.stepElements[t][s];
+        const stepAtomIdxStr = el.dataset.atomIndex;
+        const partNum = Math.floor(s / 16) + 1;
+
+        el.classList.remove('step-highlight-active', 'step-part-column', 'step-dimmed');
+
+        if (stepAtomIdxStr !== undefined && stepAtomIdxStr !== '') {
+          const hitAtomIdx = parseInt(stepAtomIdxStr, 10);
+          if (atomSet.has(hitAtomIdx)) {
+            el.classList.add('step-highlight-active');
+          } else {
+            el.classList.add('step-dimmed');
+          }
+        } else {
+          // Empty cell in matching part
+          if (targetParts.has(partNum)) {
+            el.classList.add('step-part-column');
+          } else {
+            el.classList.add('step-dimmed');
+          }
+        }
+      }
+    }
   }
 
   updatePlayhead(currentTick: number): void {
@@ -195,11 +284,9 @@ export class SequencerGridView {
       for (let s = 0; s < steps.length; s++) {
         const el = steps[s];
         if (s === currentStep) {
-          el.style.transform = 'scale(1.25)';
-          el.style.border = '1px solid #ffffff';
+          el.classList.add('seq-playhead-active');
         } else {
-          el.style.transform = 'scale(1)';
-          el.style.border = 'none';
+          el.classList.remove('seq-playhead-active');
         }
       }
     }

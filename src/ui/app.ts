@@ -173,10 +173,36 @@ export class App {
       this.selectedAtomIndex = atomIndex;
       this.renderAtomInspector(root);
       this.renderAtomPills(root);
+      this.seqView.highlightAtoms([atomIndex]);
+    };
+
+    this.svgView.onRingClick = (atomIndices) => {
+      if (atomIndices.length > 0) {
+        this.selectedAtomIndex = atomIndices[0];
+        this.svgView.selectAtom(atomIndices[0]);
+        this.renderAtomInspector(root);
+        this.renderAtomPills(root);
+      }
+      this.seqView.highlightAtoms(Array.from(atomIndices));
+    };
+
+    this.svgView.onBondClick = (atomA, atomB) => {
+      this.selectedAtomIndex = atomA;
+      this.svgView.selectAtom(atomA);
+      this.renderAtomInspector(root);
+      this.renderAtomPills(root);
+      this.seqView.highlightAtoms([atomA, atomB]);
     };
 
     const seqContainer = root.querySelector('#seq-container') as HTMLElement;
     this.seqView = new SequencerGridView(seqContainer);
+    this.seqView.onStepClick = (atomIndex) => {
+      this.selectedAtomIndex = atomIndex;
+      this.svgView.selectAtom(atomIndex);
+      this.renderAtomInspector(root);
+      this.renderAtomPills(root);
+      this.seqView.highlightAtoms([atomIndex]);
+    };
 
     // Setup event listeners
     this.bindEvents(root);
@@ -240,6 +266,9 @@ export class App {
 
     // Render Sequencer Grid
     this.seqView.render(this.currentPattern);
+    if (this.selectedAtomIndex !== null) {
+      this.seqView.highlightAtoms([this.selectedAtomIndex]);
+    }
 
     // Render Atom Inspector & Pills
     if (this.rootElement) {
@@ -393,6 +422,7 @@ export class App {
         this.svgView.selectAtom(i);
         this.renderAtomInspector(root);
         this.renderAtomPills(root);
+        this.seqView.highlightAtoms([i]);
       });
 
       pillsContainer.appendChild(pill);

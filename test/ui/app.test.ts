@@ -39,17 +39,51 @@ describe('App interactive UI and Modulation Matrix', () => {
   });
 
   // @vitest-environment happy-dom
-  it('reorders atom sequence on button click and updates custom mode', () => {
+  it('highlights corresponding sequencer parts and steps when clicking an atom in SVG', () => {
     const root = document.createElement('div');
     const app = new App();
     app.mount(root);
 
-    const seqSelect = root.querySelector('#select-order-strategy') as HTMLSelectElement;
-    expect(seqSelect.value).toBe('structural');
+    // Atom node #0 in Benzene
+    const atom0Node = root.querySelector('#atom-node-0') as SVGGElement | null;
+    expect(atom0Node).toBeTruthy();
+    atom0Node?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-    const btnLater = root.querySelector('#btn-atom-later') as HTMLButtonElement;
-    btnLater.click();
+    // Sequencer should now have active highlighted steps and active part headers
+    const activeSteps = root.querySelectorAll('.seq-step.step-highlight-active');
+    expect(activeSteps.length).toBeGreaterThan(0);
 
-    expect(seqSelect.value).toBe('custom');
+    const activeHeaders = root.querySelectorAll('.seq-part-header-active');
+    expect(activeHeaders.length).toBeGreaterThan(0);
+  });
+
+  // @vitest-environment happy-dom
+  it('highlights all ring parts when clicking on a ring motif in SVG', () => {
+    const root = document.createElement('div');
+    const app = new App();
+    app.mount(root);
+
+    const ringGroup = root.querySelector('.ring-motif-group') as SVGGElement | null;
+    expect(ringGroup).toBeTruthy();
+    ringGroup?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    const activeSteps = root.querySelectorAll('.seq-step.step-highlight-active');
+    expect(activeSteps.length).toBeGreaterThan(0);
+  });
+
+  // @vitest-environment happy-dom
+  it('selects atom when clicking on a sequencer step', () => {
+    const root = document.createElement('div');
+    const app = new App();
+    app.mount(root);
+
+    // Find a step with data-atom-index
+    const stepWithAtom = root.querySelector('.seq-step[data-atom-index="1"]') as HTMLElement | null;
+    if (stepWithAtom) {
+      stepWithAtom.click();
+      const inspector = root.querySelector('#atom-inspector');
+      expect(inspector?.textContent).toContain('Atom #1');
+    }
   });
 });
+

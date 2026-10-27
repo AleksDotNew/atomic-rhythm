@@ -32,6 +32,8 @@ export class MoleculeSvgView {
   private coords: Point2D[] = [];
   public selectedAtomIndex: number | null = 0;
   public onAtomClick?: (atomIndex: number) => void;
+  public onRingClick?: (atomIndices: readonly number[]) => void;
+  public onBondClick?: (atomA: number, atomB: number) => void;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -59,7 +61,7 @@ export class MoleculeSvgView {
 
     this.coords = computeMoleculeLayout(mol, analysis, width, height);
 
-    // Layer 1: Ring Motifs Highlights
+    // Layer 1: Ring Motifs Highlights (Interactive)
     for (const ring of analysis.rings) {
       if (ring.size >= 3) {
         let rx = 0, ry = 0;
@@ -70,6 +72,14 @@ export class MoleculeSvgView {
         rx /= ring.size;
         ry /= ring.size;
 
+        const ringG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        ringG.style.cursor = 'pointer';
+        ringG.setAttribute('class', 'ring-motif-group');
+
+        const ringTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        ringTitle.textContent = `Ring motif (${ring.size} atoms: ${ring.atomIndices.map(idx => mol.atoms[idx]?.element.symbol + idx).join(', ')})`;
+        ringG.appendChild(ringTitle);
+
         const ringCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         ringCircle.setAttribute('cx', rx.toFixed(1));
         ringCircle.setAttribute('cy', ry.toFixed(1));
@@ -78,7 +88,7 @@ export class MoleculeSvgView {
         ringCircle.setAttribute('stroke', ring.isAromatic ? '#38bdf8' : '#f59e0b');
         ringCircle.setAttribute('stroke-width', '1.5');
         ringCircle.setAttribute('stroke-dasharray', '4 4');
-        svg.appendChild(ringCircle);
+        ringG.appendChild(ringCircle);
 
         const ringLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         ringLabel.setAttribute('x', rx.toFixed(1));
@@ -88,20 +98,34 @@ export class MoleculeSvgView {
         ringLabel.setAttribute('font-size', '10px');
         ringLabel.setAttribute('font-weight', 'bold');
         ringLabel.textContent = ring.size === 5 ? '5-Part' : ring.isAromatic ? '6/8' : `${ring.size}-Ring`;
-        svg.appendChild(ringLabel);
+        ringG.appendChild(ringLabel);
+
+        ringG.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.onRingClick?.(ring.atomIndices);
+        });
+
+        svg.appendChild(ringG);
       }
     }
 
-    // Layer 2: Bonds
+    // Layer 2: Bonds (Interactive)
     for (const ab of analysis.bonds) {
       const p1 = this.coords[ab.bond.atomA];
       const p2 = this.coords[ab.bond.atomB];
       if (!p1 || !p2) continue;
 
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.style.cursor = 'pointer';
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       title.textContent = `Bond: order ${ab.bond.order}, type: ${ab.type}, Δχ: ${ab.deltaChi.toFixed(2)}`;
       g.appendChild(title);
+
+      g.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.selectAtom(ab.bond.atomA);
+        this.onBondClick?.(ab.bond.atomA, ab.bond.atomB);
+      });
 
       const dx = p2.x - p1.x;
       const dy = p2.y - p1.y;
