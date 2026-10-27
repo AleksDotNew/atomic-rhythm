@@ -19,24 +19,37 @@ export interface FunctionalGroup {
   readonly atomIndices: readonly number[];
 }
 
+export interface StructuralUnit {
+  readonly heavyAtomIndex: number;
+  readonly peripheralAtomIndices: readonly number[]; // e.g. hydrogens attached to this atom
+  readonly outgoingBond?: {
+    readonly nextHeavyAtomIndex: number;
+    readonly order: 1 | 2 | 3;
+    readonly isAromatic: boolean;
+  };
+}
+
 export interface MolecularAnalysis {
   readonly rings: readonly RingInfo[];
   readonly bonds: readonly AnalyzedBond[];
   readonly functionalGroups: readonly FunctionalGroup[];
-  readonly traversalOrder: readonly number[]; // DFS atom index sequence
+  readonly traversalOrder: readonly number[]; // Atom index sequence
+  readonly structuralUnits: readonly StructuralUnit[];
 }
 
 export function analyzeMolecule(mol: Molecule): MolecularAnalysis {
   const analyzedBonds = analyzeBonds(mol);
   const rings = findRings(mol);
   const functionalGroups = findFunctionalGroups(mol);
-  const traversalOrder = computeDfsTraversal(mol);
+  const structuralUnits = computeStructuralUnits(mol, rings);
+  const traversalOrder = computeTraversalFromUnits(mol, structuralUnits);
 
   return {
     rings,
     bonds: analyzedBonds,
     functionalGroups,
     traversalOrder,
+    structuralUnits,
   };
 }
 
@@ -191,31 +204,137 @@ function findFunctionalGroups(mol: Molecule): FunctionalGroup[] {
   return groups;
 }
 
-function computeDfsTraversal(mol: Molecule): number[] {
-  const order: number[] = [];
-  const visited = new Set<number>();
+export function computeStructuralUnits(mol: Molecule, rings: readonly RingInfo[]): StructuralUnit[] {
+  const units: StructuralUnit[] = [];
   const adj = buildAdjacencyList(mol);
+  const visitedHeavy = new Set<number>();
+  const visitedPeripheral = new Set<number>();
 
-  for (let start = 0; start < mol.atoms.length; start++) {
-    if (visited.has(start)) continue;
+  const isHydrogen = (idx: number) => idx >= 0 && idx < mol.atoms.length && mol.atoms[idx].element.symbol === 'H';
 
-    const stack: number[] = [start];
-    while (stack.length > 0) {
-      const curr = stack.pop()!;
-      if (visited.has(curr)) continue;
-      visited.add(curr);
-      order.push(curr);
+  // 1. First process rings if present
+  for (const ring of rings) {
+    const rAtoms = ring.atomIndices;
+    const ringSet = new Set(rAtoms);
 
-      const neighbors = adj.get(curr) || [];
-      // Push in reverse order so smaller indices are popped first
-      for (let i = neighbors.length - 1; i >= 0; i--) {
-        const next = neighbors[i];
-        if (!visited.has(next)) {
-          stack.push(next);
+    for (let i = 0; i < rAtoms.length; i++) {
+      const heavyIdx = rAtoms[i];
+      if (visitedHeavy.has(heavyIdx)) continue;
+      visitedHeavy.add(heavyIdx);
+
+      // Find peripheral atoms attached to this heavy atom (hydrogens or non-ring terminal atoms)
+      const neighbors = adj.get(heavyIdx) || [];
+      const peripherals: number[] = [];
+      for (const n of neighbors) {
+        if (!ringSet.has(n) && !visitedPeripheral.has(n) && (isHydrogen(n) || (adj.get(n)?.length === 1))) {
+          peripherals.push(n);
+          visitedPeripheral.add(n);
         }
       }
+
+      // Outgoing bond to next atom in ring
+      const nextHeavyIdx = rAtoms[(i + 1) % rAtoms.length];
+      const bond = mol.bonds.find(
+        b => (b.atomA === heavyIdx && b.atomB === nextHeavyIdx) || (b.atomA === nextHeavyIdx && b.atomB === heavyIdx)
+      );
+
+      units.push({
+        heavyAtomIndex: heavyIdx,
+        peripheralAtomIndices: peripherals,
+        outgoingBond: bond
+          ? {
+              nextHeavyAtomIndex: nextHeavyIdx,
+              order: bond.order,
+              isAromatic: bond.isAromatic,
+            }
+          : undefined,
+      });
+    }
+  }
+
+  // 2. Process non-ring heavy atoms (backbone / side chains)
+  const heavyAtomIndices = mol.atoms
+    .map((_, i) => i)
+    .filter(i => !isHydrogen(i) && !visitedHeavy.has(i));
+
+  for (const heavyIdx of heavyAtomIndices) {
+    if (visitedHeavy.has(heavyIdx)) continue;
+    visitedHeavy.add(heavyIdx);
+
+    const neighbors = adj.get(heavyIdx) || [];
+    const peripherals: number[] = [];
+    let nextHeavy: number | undefined;
+
+    for (const n of neighbors) {
+      if (isHydrogen(n) && !visitedPeripheral.has(n)) {
+        peripherals.push(n);
+        visitedPeripheral.add(n);
+      } else if (!isHydrogen(n) && !visitedHeavy.has(n) && nextHeavy === undefined) {
+        nextHeavy = n;
+      }
+    }
+
+    let outgoingBond: StructuralUnit['outgoingBond'];
+    if (nextHeavy !== undefined) {
+      const bond = mol.bonds.find(
+        b => (b.atomA === heavyIdx && b.atomB === nextHeavy) || (b.atomA === nextHeavy && b.atomB === heavyIdx)
+      );
+      if (bond) {
+        outgoingBond = {
+          nextHeavyAtomIndex: nextHeavy,
+          order: bond.order,
+          isAromatic: bond.isAromatic,
+        };
+      }
+    }
+
+    units.push({
+      heavyAtomIndex: heavyIdx,
+      peripheralAtomIndices: peripherals,
+      outgoingBond,
+    });
+  }
+
+  // 3. Fallback for molecules with no heavy atoms (e.g. H2)
+  if (units.length === 0) {
+    for (let i = 0; i < mol.atoms.length; i++) {
+      units.push({
+        heavyAtomIndex: i,
+        peripheralAtomIndices: [],
+      });
+    }
+  }
+
+  return units;
+}
+
+function computeTraversalFromUnits(mol: Molecule, units: readonly StructuralUnit[]): number[] {
+  const order: number[] = [];
+  const visited = new Set<number>();
+
+  for (const unit of units) {
+    // 1. Hydrogens / peripheral atoms lead into the heavy atom
+    for (const pIdx of unit.peripheralAtomIndices) {
+      if (!visited.has(pIdx)) {
+        visited.add(pIdx);
+        order.push(pIdx);
+      }
+    }
+    // 2. Central heavy atom
+    if (!visited.has(unit.heavyAtomIndex)) {
+      visited.add(unit.heavyAtomIndex);
+      order.push(unit.heavyAtomIndex);
+    }
+  }
+
+  // 3. Guarantee any remaining unvisited atoms are included
+  for (let i = 0; i < mol.atoms.length; i++) {
+    if (!visited.has(i)) {
+      visited.add(i);
+      order.push(i);
     }
   }
 
   return order;
 }
+

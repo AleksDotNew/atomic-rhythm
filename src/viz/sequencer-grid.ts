@@ -1,5 +1,32 @@
 import { Pattern, PPQ } from '../rhythm/ir';
 
+export const TRACK_VOICE_COLORS: Record<string, string> = {
+  proton: '#38bdf8',
+  kick: '#38bdf8',
+  neutron: '#f59e0b',
+  hat: '#f59e0b',
+  snare: '#ec4899',
+  clap: '#a855f7',
+  rim: '#10b981',
+  bond: '#f97316',
+};
+
+export function getVoiceColor(voice: string): string {
+  if (TRACK_VOICE_COLORS[voice]) return TRACK_VOICE_COLORS[voice];
+  if (voice.startsWith('electron.')) return '#ec4899';
+  if (voice.startsWith('motif.')) return '#10b981';
+  return '#38bdf8';
+}
+
+export function formatVoiceLabel(voice: string): string {
+  if (voice === 'proton') return 'Proton (Kick)';
+  if (voice === 'neutron') return 'Neutron (Hat)';
+  if (voice.startsWith('electron.')) return `Electron (${voice.replace('electron.', '')})`;
+  if (voice === 'bond') return 'Bond (Flam/Roll)';
+  if (voice.startsWith('motif.')) return `Motif (${voice.replace('motif.', '')})`;
+  return voice.charAt(0).toUpperCase() + voice.slice(1);
+}
+
 export class SequencerGridView {
   private container: HTMLElement;
   private pattern: Pattern | null = null;
@@ -23,9 +50,63 @@ export class SequencerGridView {
     wrapper.style.background = '#0f172a';
     wrapper.style.borderRadius = '8px';
     wrapper.style.border = '1px solid #1e293b';
+    wrapper.style.overflowX = 'auto';
+    wrapper.style.maxWidth = '100%';
 
     const stepTicks = PPQ / 4; // 24 ticks (16th note)
+    const totalBars = pattern.bars;
+    const maxSteps = totalBars * 16;
 
+    // Header row showing Part / Bar markers
+    const headerRow = document.createElement('div');
+    headerRow.className = 'sequencer-header-row';
+    headerRow.style.display = 'flex';
+    headerRow.style.alignItems = 'center';
+    headerRow.style.gap = '4px';
+    headerRow.style.marginBottom = '2px';
+
+    const headerLabel = document.createElement('span');
+    headerLabel.style.width = '120px';
+    headerLabel.style.minWidth = '120px';
+    headerLabel.style.fontSize = '10px';
+    headerLabel.style.fontWeight = 'bold';
+    headerLabel.style.color = '#64748b';
+    headerLabel.style.textTransform = 'uppercase';
+    headerLabel.textContent = 'Part / Step';
+    headerRow.appendChild(headerLabel);
+
+    for (let s = 0; s < maxSteps; s++) {
+      const stepHeader = document.createElement('div');
+      stepHeader.style.width = '16px';
+      stepHeader.style.minWidth = '16px';
+      stepHeader.style.fontSize = '9px';
+      stepHeader.style.textAlign = 'center';
+      stepHeader.style.fontFamily = 'monospace';
+
+      const isPartStart = s % 16 === 0;
+      const partNum = Math.floor(s / 16) + 1;
+
+      if (isPartStart) {
+        stepHeader.textContent = `P${partNum}`;
+        stepHeader.style.color = '#38bdf8';
+        stepHeader.style.fontWeight = 'bold';
+      } else if (s % 4 === 0) {
+        stepHeader.textContent = `${(s % 16) / 4 + 1}`;
+        stepHeader.style.color = '#64748b';
+      } else {
+        stepHeader.textContent = '·';
+        stepHeader.style.color = '#334155';
+      }
+
+      if (s % 16 === 15) {
+        stepHeader.style.marginRight = '6px';
+      }
+
+      headerRow.appendChild(stepHeader);
+    }
+    wrapper.appendChild(headerRow);
+
+    // Track rows
     for (let tIdx = 0; tIdx < pattern.tracks.length; tIdx++) {
       const track = pattern.tracks[tIdx];
       const row = document.createElement('div');
@@ -37,39 +118,57 @@ export class SequencerGridView {
       // Track voice label
       const label = document.createElement('span');
       label.className = 'track-label';
-      label.textContent = track.voice;
-      label.style.width = '100px';
+      label.textContent = formatVoiceLabel(track.voice);
+      label.style.width = '120px';
+      label.style.minWidth = '120px';
       label.style.fontSize = '11px';
       label.style.fontWeight = '600';
-      label.style.color = '#94a3b8';
+      label.style.color = getVoiceColor(track.voice);
       label.style.textOverflow = 'ellipsis';
       label.style.overflow = 'hidden';
       label.style.whiteSpace = 'nowrap';
       row.appendChild(label);
 
       // Steps container
-      const stepsCount = Math.max(1, Math.round(track.cycleTicks / stepTicks));
+      const stepsCount = maxSteps;
       const rowSteps: HTMLElement[] = [];
 
-      const activeTicks = new Set(track.events.map(e => Math.round(e.tick / stepTicks)));
+      // Map active hits with their atomIndex and articulation
+      const hitsMap = new Map<number, { atomIndex?: number; articulation: string }>();
+      for (const evt of track.events) {
+        const s = Math.round(evt.tick / stepTicks);
+        hitsMap.set(s, { atomIndex: evt.atomIndex, articulation: evt.articulation });
+      }
+
+      const voiceColor = getVoiceColor(track.voice);
 
       for (let s = 0; s < stepsCount; s++) {
         const step = document.createElement('div');
         step.className = 'seq-step';
         step.dataset.step = `${s}`;
-        step.style.width = '18px';
-        step.style.height = '18px';
+        step.style.width = '16px';
+        step.style.minWidth = '16px';
+        step.style.height = '16px';
         step.style.borderRadius = '3px';
         step.style.transition = 'all 0.08s ease';
 
-        const isHit = activeTicks.has(s);
+        const hit = hitsMap.get(s);
         const isDownbeat = s % 4 === 0;
 
-        if (isHit) {
-          step.style.background = '#38bdf8';
-          step.style.boxShadow = '0 0 4px rgba(56, 189, 248, 0.4)';
+        if (hit) {
+          step.style.background = voiceColor;
+          step.style.boxShadow = `0 0 5px ${voiceColor}66`;
+          const atomLabel = hit.atomIndex !== undefined ? `Atom #${hit.atomIndex}` : '';
+          const artLabel = hit.articulation !== 'normal' ? ` [${hit.articulation}]` : '';
+          step.title = `Step ${s + 1}${artLabel} ${atomLabel}`.trim();
         } else {
           step.style.background = isDownbeat ? '#334155' : '#1e293b';
+        }
+
+        // Add visual gap at end of each 16-step part
+        if (s % 16 === 15) {
+          step.style.marginRight = '6px';
+          step.style.borderRight = '1px solid #475569';
         }
 
         row.appendChild(step);
@@ -86,19 +185,17 @@ export class SequencerGridView {
   updatePlayhead(currentTick: number): void {
     if (!this.pattern) return;
     const stepTicks = PPQ / 4; // 24 ticks
+    const maxSteps = this.pattern.bars * 16;
+    const currentStep = Math.floor(currentTick / stepTicks) % maxSteps;
 
-    for (let tIdx = 0; tIdx < this.pattern.tracks.length; tIdx++) {
-      const track = this.pattern.tracks[tIdx];
+    for (let tIdx = 0; tIdx < this.stepElements.length; tIdx++) {
       const steps = this.stepElements[tIdx];
-      if (!steps || steps.length === 0) continue;
-
-      const trackTick = currentTick % track.cycleTicks;
-      const currentStep = Math.floor(trackTick / stepTicks) % steps.length;
+      if (!steps) continue;
 
       for (let s = 0; s < steps.length; s++) {
         const el = steps[s];
         if (s === currentStep) {
-          el.style.transform = 'scale(1.2)';
+          el.style.transform = 'scale(1.25)';
           el.style.border = '1px solid #ffffff';
         } else {
           el.style.transform = 'scale(1)';

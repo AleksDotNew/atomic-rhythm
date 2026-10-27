@@ -29,4 +29,50 @@ describe('buildMoleculePattern', () => {
     const pat = buildMoleculePattern(h2, { mode: 'overlay' });
     expect(pat.bars).toBe(1);
   });
+
+  it('builds cyclopentane C1CCCC1 as a 5-part cycle with 1 bar per ring unit', () => {
+    const cyclopentane = parseSmiles('C1CCCC1');
+    const pat = buildMoleculePattern(cyclopentane, { mode: 'sequential' });
+
+    // 5-part cycle = 5 bars
+    expect(pat.bars).toBe(5);
+
+    // Each bar has events from its unit's carbon and hydrogens
+    const oneBarTicks = 16 * 24; // 384 ticks
+    for (let bar = 0; bar < 5; bar++) {
+      const barStart = bar * oneBarTicks;
+      const barEnd = (bar + 1) * oneBarTicks;
+      // All tracks have active events in every bar (no empty dead zones!)
+      const eventsInBar = pat.tracks.flatMap(t => t.events.filter(e => e.tick >= barStart && e.tick < barEnd));
+      expect(eventsInBar.length).toBeGreaterThan(0);
+    }
+
+    // Has bond transitions between ring units
+    const bondTrack = pat.tracks.find(t => t.voice === 'bond');
+    expect(bondTrack).toBeDefined();
+    expect(bondTrack!.events.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('respects atomVoiceOverrides: can remap an atom to hat or mute it', () => {
+    const h2 = parseSmiles('[H][H]');
+
+    // Remap atom 0 to 'hat', mute atom 1
+    const pat = buildMoleculePattern(h2, {
+      mode: 'overlay',
+      atomVoiceOverrides: {
+        0: 'hat',
+        1: 'mute',
+      },
+    });
+
+    // Check that atom 0's events go to 'hat' track
+    const hatTrack = pat.tracks.find(t => t.voice === 'hat');
+    expect(hatTrack).toBeDefined();
+    expect(hatTrack!.events.some(e => e.atomIndex === 0)).toBe(true);
+
+    // Check that atom 1 has zero events in any track
+    const allEvents = pat.tracks.flatMap(t => t.events);
+    expect(allEvents.some(e => e.atomIndex === 1)).toBe(false);
+  });
 });
+

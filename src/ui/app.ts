@@ -12,7 +12,7 @@ import { DEFAULT_MOD_MATRIX, ModulationMatrix, ModRoute, ModSource, ModDest } fr
 import { buildMoleculePattern, FormMode, PlaybackMode } from '../rhythm/molecule-pattern';
 import { buildFormSequence } from '../rhythm/form';
 import { loadRecipes, saveRecipe, SavedRecipe } from '../storage/db';
-import { MoleculeSvgView } from '../viz/molecule-svg';
+import { MoleculeSvgView, VOICE_BADGES, ELEMENT_COLORS } from '../viz/molecule-svg';
 import { SequencerGridView } from '../viz/sequencer-grid';
 
 export class App {
@@ -27,12 +27,16 @@ export class App {
   private formMode: FormMode = 'direct';
   private atomsPerBar: number = 2;
 
+  private selectedAtomIndex: number = 0;
+  private atomVoiceOverrides: Record<number, SynthVoiceName | 'default' | 'mute'> = {};
+
   private audioCtx: AudioContext | null = null;
   private drumSynth: DrumSynth | null = null;
   private scheduler: AudioScheduler | null = null;
 
   private svgView!: MoleculeSvgView;
   private seqView!: SequencerGridView;
+  private rootElement!: HTMLElement;
 
   constructor() {
     // Default start with Benzene
@@ -43,10 +47,12 @@ export class App {
       atomsPerBar: this.atomsPerBar,
       matrix: this.currentMatrix,
       temperature: this.temperature,
+      atomVoiceOverrides: this.atomVoiceOverrides,
     });
   }
 
   mount(root: HTMLElement): void {
+    this.rootElement = root;
     root.innerHTML = `
       <header class="transport-bar">
         <div class="brand">
@@ -71,7 +77,7 @@ export class App {
           <div class="control-group">
             <label for="select-mode">Mode</label>
             <select id="select-mode">
-              <option value="sequential">Sequential (Atoms in bar)</option>
+              <option value="sequential">Sequential (5-Part / Cycle)</option>
               <option value="overlay">Overlay (Simultaneous)</option>
             </select>
           </div>
@@ -98,7 +104,7 @@ export class App {
 
           <div class="input-block">
             <label for="input-smiles">SMILES Formula</label>
-            <input type="text" id="input-smiles" value="c1ccccc1" placeholder="e.g. CCO, [H][H]" />
+            <input type="text" id="input-smiles" value="c1ccccc1" placeholder="e.g. C1CCCC1, CCO, [H][H]" />
             <div id="smiles-error" class="status-error" style="display: none;"></div>
           </div>
 
@@ -114,12 +120,21 @@ export class App {
           <div class="sequencer-container" id="seq-container"></div>
         </section>
 
-        <!-- Right Panel: Modulation Matrix & Export -->
+        <!-- Right Panel: Atom Instrument Manager, Modulation Matrix & Export -->
         <section class="panel">
-          <h2>Modulation Matrix</h2>
+          <h2>Atom Instruments</h2>
+          <div id="atom-inspector" class="atom-inspector-card"></div>
+          <div class="atom-pills-container" id="atom-pills"></div>
+          <div class="atom-quick-actions">
+            <button id="btn-quick-h-hat" class="btn-xs">All H → Hat</button>
+            <button id="btn-quick-c-kick" class="btn-xs">All C → Kick</button>
+            <button id="btn-quick-reset" class="btn-xs">Reset All</button>
+          </div>
+
+          <h2 style="margin-top: 10px;">Modulation Matrix</h2>
           <div class="routes-list" id="routes-list"></div>
 
-          <h2 style="margin-top: 8px;">Export</h2>
+          <h2 style="margin-top: 10px;">Export</h2>
           <div class="export-actions">
             <button id="btn-export-strudel" class="btn-secondary">📋 Copy Strudel Code</button>
             <button id="btn-export-midi" class="btn-secondary">💾 Download MIDI (.mid)</button>
@@ -131,6 +146,11 @@ export class App {
     // Initialize views
     const svgContainer = root.querySelector('#svg-container') as HTMLElement;
     this.svgView = new MoleculeSvgView(svgContainer);
+    this.svgView.onAtomClick = (atomIndex) => {
+      this.selectedAtomIndex = atomIndex;
+      this.renderAtomInspector(root);
+      this.renderAtomPills(root);
+    };
 
     const seqContainer = root.querySelector('#seq-container') as HTMLElement;
     this.seqView = new SequencerGridView(seqContainer);
@@ -165,10 +185,18 @@ export class App {
       atomsPerBar: this.atomsPerBar,
       matrix: this.currentMatrix,
       temperature: this.temperature,
+      atomVoiceOverrides: this.atomVoiceOverrides,
     });
 
-    // Render SVG
-    this.svgView.render(this.currentMolecule, this.currentAnalysis);
+    // Render SVG with selection and badges
+    this.svgView.selectedAtomIndex = this.selectedAtomIndex;
+    this.svgView.render(
+      this.currentMolecule,
+      this.currentAnalysis,
+      520,
+      340,
+      this.atomVoiceOverrides
+    );
 
     // Check excitation for each atom
     for (let i = 0; i < this.currentMolecule.atoms.length; i++) {
@@ -180,9 +208,99 @@ export class App {
     // Render Sequencer Grid
     this.seqView.render(this.currentPattern);
 
+    // Render Atom Inspector & Pills
+    if (this.rootElement) {
+      this.renderAtomInspector(this.rootElement);
+      this.renderAtomPills(this.rootElement);
+    }
+
     // Update scheduler if running
     if (this.scheduler) {
       this.scheduler.setPattern(this.currentPattern, effectiveBpm);
+    }
+  }
+
+  private renderAtomInspector(root: HTMLElement): void {
+    const inspector = root.querySelector('#atom-inspector') as HTMLElement;
+    if (!inspector) return;
+
+    if (this.selectedAtomIndex >= this.currentMolecule.atoms.length) {
+      this.selectedAtomIndex = 0;
+    }
+
+    const atom = this.currentMolecule.atoms[this.selectedAtomIndex];
+    if (!atom) {
+      inspector.innerHTML = `<div style="color: var(--text-muted); font-size: 0.8rem;">No atom selected</div>`;
+      return;
+    }
+
+    const currentVoice = this.atomVoiceOverrides[this.selectedAtomIndex] || 'default';
+    const color = ELEMENT_COLORS[atom.element.symbol] || '#94a3b8';
+
+    inspector.innerHTML = `
+      <div class="atom-card-header">
+        <div class="atom-card-title">
+          <span class="atom-symbol-badge" style="border-color: ${color}; color: ${color};">${atom.element.symbol}</span>
+          <span>Atom #${this.selectedAtomIndex} ${atom.element.name}</span>
+        </div>
+        <div class="atom-props">${atom.protons}p ${atom.neutrons}n ${atom.electrons}e</div>
+      </div>
+
+      <div class="atom-voice-select-row">
+        <label for="select-atom-voice">Assigned Instrument / Voice</label>
+        <select id="select-atom-voice">
+          <option value="default" ${currentVoice === 'default' ? 'selected' : ''}>Default (Kick/Hat/Snare)</option>
+          <option value="kick" ${currentVoice === 'kick' ? 'selected' : ''}>Kick Drum (Бочка)</option>
+          <option value="snare" ${currentVoice === 'snare' ? 'selected' : ''}>Snare Drum (Малый)</option>
+          <option value="hat" ${currentVoice === 'hat' ? 'selected' : ''}>Closed Hi-Hat (Хэт)</option>
+          <option value="clap" ${currentVoice === 'clap' ? 'selected' : ''}>Hand Clap (Хлопок)</option>
+          <option value="rim" ${currentVoice === 'rim' ? 'selected' : ''}>Rimshot (Римшот)</option>
+          <option value="mute" ${currentVoice === 'mute' ? 'selected' : ''}>Mute (Заглушить)</option>
+        </select>
+      </div>
+    `;
+
+    const select = inspector.querySelector('#select-atom-voice') as HTMLSelectElement;
+    select.addEventListener('change', () => {
+      const val = select.value as SynthVoiceName | 'default' | 'mute';
+      this.atomVoiceOverrides[this.selectedAtomIndex] = val;
+      this.updateAll();
+    });
+  }
+
+  private renderAtomPills(root: HTMLElement): void {
+    const pillsContainer = root.querySelector('#atom-pills') as HTMLElement;
+    if (!pillsContainer) return;
+
+    pillsContainer.innerHTML = '';
+
+    for (let i = 0; i < this.currentMolecule.atoms.length; i++) {
+      const a = this.currentMolecule.atoms[i];
+      const pill = document.createElement('div');
+      const isSelected = i === this.selectedAtomIndex;
+      pill.className = `atom-pill ${isSelected ? 'active' : ''}`;
+
+      const color = ELEMENT_COLORS[a.element.symbol] || '#94a3b8';
+      const overrideVoice = this.atomVoiceOverrides[i];
+      let badgeHtml = '';
+      if (overrideVoice && overrideVoice !== 'default') {
+        const b = VOICE_BADGES[overrideVoice];
+        badgeHtml = `<span class="badge" style="background: ${b?.color || '#38bdf8'};">${b?.label || overrideVoice.slice(0, 2).toUpperCase()}</span>`;
+      }
+
+      pill.innerHTML = `
+        <span style="color: ${color}; font-weight: bold;">${a.element.symbol}${i}</span>
+        ${badgeHtml}
+      `;
+
+      pill.addEventListener('click', () => {
+        this.selectedAtomIndex = i;
+        this.svgView.selectAtom(i);
+        this.renderAtomInspector(root);
+        this.renderAtomPills(root);
+      });
+
+      pillsContainer.appendChild(pill);
     }
   }
 
@@ -199,6 +317,34 @@ export class App {
     const smilesError = root.querySelector('#smiles-error') as HTMLElement;
     const btnExportStrudel = root.querySelector('#btn-export-strudel') as HTMLButtonElement;
     const btnExportMidi = root.querySelector('#btn-export-midi') as HTMLButtonElement;
+
+    // Quick atom voice action buttons
+    const btnQuickHHat = root.querySelector('#btn-quick-h-hat') as HTMLButtonElement;
+    const btnQuickCKick = root.querySelector('#btn-quick-c-kick') as HTMLButtonElement;
+    const btnQuickReset = root.querySelector('#btn-quick-reset') as HTMLButtonElement;
+
+    btnQuickHHat?.addEventListener('click', () => {
+      for (let i = 0; i < this.currentMolecule.atoms.length; i++) {
+        if (this.currentMolecule.atoms[i].element.symbol === 'H') {
+          this.atomVoiceOverrides[i] = 'hat';
+        }
+      }
+      this.updateAll();
+    });
+
+    btnQuickCKick?.addEventListener('click', () => {
+      for (let i = 0; i < this.currentMolecule.atoms.length; i++) {
+        if (this.currentMolecule.atoms[i].element.symbol === 'C') {
+          this.atomVoiceOverrides[i] = 'kick';
+        }
+      }
+      this.updateAll();
+    });
+
+    btnQuickReset?.addEventListener('click', () => {
+      this.atomVoiceOverrides = {};
+      this.updateAll();
+    });
 
     // Transport Play/Stop
     btnPlay.addEventListener('click', () => {
@@ -269,6 +415,8 @@ export class App {
         const mol = parseSmiles(inputSmiles.value);
         this.currentMolecule = mol;
         this.currentAnalysis = analyzeMolecule(mol);
+        this.atomVoiceOverrides = {};
+        this.selectedAtomIndex = 0;
         smilesError.style.display = 'none';
         this.updateAll();
       } catch (err) {
@@ -329,6 +477,8 @@ export class App {
 
         this.currentMolecule = parseSmiles(preset.smiles, preset.name);
         this.currentAnalysis = analyzeMolecule(this.currentMolecule);
+        this.atomVoiceOverrides = {};
+        this.selectedAtomIndex = 0;
         this.updateAll();
       });
 

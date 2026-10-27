@@ -37,4 +37,35 @@ describe('analyzeMolecule', () => {
     expect(analysis.traversalOrder.length).toBe(ethanol.atoms.length);
     expect(new Set(analysis.traversalOrder).size).toBe(ethanol.atoms.length);
   });
+
+  it('detects 5 structural units in cyclopentane C1CCCC1 in a 5-part cycle', () => {
+    const cyclopentane = parseSmiles('C1CCCC1');
+    const analysis = analyzeMolecule(cyclopentane);
+
+    expect(analysis.rings.length).toBe(1);
+    expect(analysis.rings[0].size).toBe(5);
+    expect(analysis.structuralUnits.length).toBe(5);
+
+    // Each structural unit in cyclopentane has 1 heavy atom (C) and 2 peripheral atoms (H)
+    for (const unit of analysis.structuralUnits) {
+      expect(cyclopentane.atoms[unit.heavyAtomIndex].element.symbol).toBe('C');
+      expect(unit.peripheralAtomIndices.length).toBe(2);
+      for (const hIdx of unit.peripheralAtomIndices) {
+        expect(cyclopentane.atoms[hIdx].element.symbol).toBe('H');
+      }
+      expect(unit.outgoingBond).toBeDefined();
+    }
+
+    // Traversal order groups hydrogens right before their heavy atom (H -> C)
+    const firstUnit = analysis.structuralUnits[0];
+    const cIdx = firstUnit.heavyAtomIndex;
+    const hIndices = firstUnit.peripheralAtomIndices;
+
+    const cPosInTraversal = analysis.traversalOrder.indexOf(cIdx);
+    for (const hIdx of hIndices) {
+      const hPos = analysis.traversalOrder.indexOf(hIdx);
+      expect(hPos).toBeLessThan(cPosInTraversal);
+    }
+  });
 });
+
