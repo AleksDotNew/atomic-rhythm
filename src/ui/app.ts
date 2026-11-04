@@ -6,7 +6,16 @@ import { AudioScheduler } from '../audio/scheduler';
 import { createDrumSynth, DrumSynth, SynthVoiceName } from '../audio/synth';
 import { exportToMidi } from '../export/midi';
 import { exportToStrudel } from '../export/strudel';
-import { calculateBpm, isAtomExcited } from '../rhythm/excitation';
+import { isAtomExcited } from '../rhythm/excitation';
+import {
+  calculateBpm,
+  getPhaseState,
+  sliderToTemperature,
+  temperatureToSlider,
+  formatTemperature,
+} from '../rhythm/temperature';
+import { computeAtomPans, formatPanLabel } from '../rhythm/panning';
+import { computeMoleculeLayout } from '../viz/layout';
 import { Pattern } from '../rhythm/ir';
 import { DEFAULT_MOD_MATRIX, ModulationMatrix, ModRoute, ModSource, ModDest } from '../rhythm/modmatrix';
 import { buildMoleculePattern, FormMode, PlaybackMode } from '../rhythm/molecule-pattern';
@@ -30,6 +39,7 @@ export class App {
   private atomsPerBar: number = 2;
   private orderStrategy: OrderStrategy = 'structural';
   private customOrder: number[] = [];
+  private atomPans: number[] = [];
 
   private selectedAtomIndex: number = 0;
   private atomVoiceOverrides: Record<number, SynthVoiceName | 'default' | 'mute'> = {};
@@ -47,6 +57,8 @@ export class App {
     this.currentMolecule = parseSmiles('c1ccccc1');
     this.currentAnalysis = analyzeMolecule(this.currentMolecule);
     this.customOrder = this.currentMolecule.atoms.map((_, idx) => idx);
+    const coords = computeMoleculeLayout(this.currentMolecule, this.currentAnalysis, 520, 340);
+    this.atomPans = computeAtomPans(coords);
     this.currentPattern = buildMoleculePattern(this.currentMolecule, {
       mode: this.playbackMode,
       atomsPerBar: this.atomsPerBar,
@@ -55,6 +67,7 @@ export class App {
       atomVoiceOverrides: this.atomVoiceOverrides,
       orderStrategy: this.orderStrategy,
       customOrder: this.customOrder,
+      atomPans: this.atomPans,
     });
   }
 
@@ -76,8 +89,9 @@ export class App {
           </div>
 
           <div class="control-group">
-            <label for="slider-temp">Temp: <span id="temp-val">0</span>°</label>
-            <input type="range" id="slider-temp" min="0" max="100" value="0" />
+            <label for="slider-temp">Temp: <span id="temp-val">0°C</span></label>
+            <input type="range" id="slider-temp" min="-1000" max="1000" value="0" step="1" />
+            <span id="phase-badge" class="phase-badge phase-liquid">💧 Liquid</span>
             <span id="effective-bpm" style="font-size: 0.8rem; color: var(--accent-cyan);">(120 bpm)</span>
           </div>
 
@@ -259,6 +273,13 @@ export class App {
       this.customOrder
     );
 
+    const svgBox = this.rootElement?.querySelector('#svg-container') as HTMLElement | null;
+    const svgWidth = svgBox && svgBox.clientWidth > 100 ? svgBox.clientWidth : 520;
+    const svgHeight = svgBox && svgBox.clientHeight > 100 ? svgBox.clientHeight : 340;
+
+    const coords = computeMoleculeLayout(this.currentMolecule, this.currentAnalysis, svgWidth, svgHeight);
+    this.atomPans = computeAtomPans(coords);
+
     this.currentPattern = buildMoleculePattern(this.currentMolecule, {
       mode: this.playbackMode,
       atomsPerBar: this.atomsPerBar,
@@ -267,12 +288,8 @@ export class App {
       atomVoiceOverrides: this.atomVoiceOverrides,
       orderStrategy: this.orderStrategy,
       customOrder: this.customOrder,
+      atomPans: this.atomPans,
     });
-
-    // Render SVG with selection, badges and computed sequence order
-    const svgBox = this.rootElement?.querySelector('#svg-container') as HTMLElement | null;
-    const svgWidth = svgBox && svgBox.clientWidth > 100 ? svgBox.clientWidth : 520;
-    const svgHeight = svgBox && svgBox.clientHeight > 100 ? svgBox.clientHeight : 340;
 
     this.svgView.selectedAtomIndex = this.selectedAtomIndex;
     this.svgView.render(
@@ -297,8 +314,24 @@ export class App {
       this.seqView.highlightAtoms([this.selectedAtomIndex]);
     }
 
-    // Render Atom Inspector & Pills
+    // Render Atom Inspector & Pills and update top bar indicators
     if (this.rootElement) {
+      const tempVal = this.rootElement.querySelector('#temp-val');
+      if (tempVal) tempVal.textContent = formatTemperature(this.temperature);
+
+      const phase = getPhaseState(this.temperature);
+      const phaseBadge = this.rootElement.querySelector('#phase-badge');
+      if (phaseBadge) {
+        phaseBadge.className = `phase-badge phase-${phase}`;
+        const phaseLabel = phase === 'solid' ? '❄️ Solid' : phase === 'liquid' ? '💧 Liquid' : phase === 'gas' ? '💨 Gas' : '⚡ Plasma';
+        phaseBadge.textContent = phaseLabel;
+      }
+
+      const effectiveBpmLabel = this.rootElement.querySelector('#effective-bpm');
+      if (effectiveBpmLabel) {
+        effectiveBpmLabel.textContent = `(${effectiveBpm} bpm)`;
+      }
+
       this.renderAtomInspector(this.rootElement);
       this.renderAtomPills(this.rootElement);
     }
@@ -351,6 +384,7 @@ export class App {
         <span>Weight: <b style="color: var(--accent-amber);">${bondWeight.toFixed(1)}</b></span>
         <span>Valence: <b>${atom.typicalValence}</b></span>
         <span>Step: <b style="color: var(--accent-amber);">#${orderRank}/${this.currentMolecule.atoms.length}</b></span>
+        <span>Pan: <b style="color: var(--accent-cyan);">${formatPanLabel(this.atomPans[this.selectedAtomIndex] ?? 0)}</b></span>
       </div>
 
       <div class="atom-reorder-row">
@@ -559,10 +593,9 @@ export class App {
 
     // Temperature slider
     sliderTemp.addEventListener('input', () => {
-      this.temperature = parseInt(sliderTemp.value, 10);
-      tempVal.textContent = `${this.temperature}`;
-      const effectiveBpm = calculateBpm(this.baseBpm, this.temperature);
-      effectiveBpmLabel.textContent = `(${effectiveBpm} bpm)`;
+      const sliderVal = parseInt(sliderTemp.value, 10);
+      const u = sliderVal / 1000;
+      this.temperature = sliderToTemperature(u);
       this.updateAll();
     });
 

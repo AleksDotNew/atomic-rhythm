@@ -30,6 +30,7 @@ describe('App interactive UI and Modulation Matrix', () => {
     expect(inspector?.textContent).toContain('Bonds:');
     expect(inspector?.textContent).toContain('Weight:');
     expect(inspector?.textContent).toContain('Valence:');
+    expect(inspector?.textContent).toContain('Pan:');
 
     // Reorder buttons exist
     const btnEarlier = root.querySelector('#btn-atom-earlier');
@@ -84,6 +85,37 @@ describe('App interactive UI and Modulation Matrix', () => {
       const inspector = root.querySelector('#atom-inspector');
       expect(inspector?.textContent).toContain('Atom #1');
     }
+  });
+
+  // @vitest-environment happy-dom
+  it('updates temperature non-linearly and reflects phase state on the phase badge', () => {
+    const root = document.createElement('div');
+    const app = new App();
+    app.mount(root);
+
+    const slider = root.querySelector('#slider-temp') as HTMLInputElement | null;
+    const tempVal = root.querySelector('#temp-val') as HTMLElement | null;
+    const phaseBadge = root.querySelector('#phase-badge') as HTMLElement | null;
+    const bpmVal = root.querySelector('#effective-bpm') as HTMLElement | null;
+
+    expect(slider).toBeTruthy();
+    expect(tempVal?.textContent).toContain('0°C');
+    expect(phaseBadge?.textContent).toContain('Liquid');
+    expect(bpmVal?.textContent).toContain('120');
+
+    // Slide down to cryo
+    slider!.value = '-1000'; // -273.15°C
+    slider!.dispatchEvent(new Event('input'));
+    expect(tempVal?.textContent).toContain('-273°C');
+    expect(phaseBadge?.textContent).toContain('Solid');
+    expect(bpmVal?.textContent).toContain('1 bpm');
+
+    // Slide up to plasma
+    slider!.value = '1000'; // 5000°C
+    slider!.dispatchEvent(new Event('input'));
+    expect(tempVal?.textContent).toContain('+5000°C');
+    expect(phaseBadge?.textContent).toContain('Plasma');
+    expect(bpmVal?.textContent).toContain('360 bpm');
   });
 });
 
