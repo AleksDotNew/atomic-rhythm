@@ -142,7 +142,7 @@ export class AudioScheduler {
 
         for (const se of events) {
           const eventTime = this.startAudioTime + ticksToSeconds(se.tick, this.bpm);
-          this.synth.trigger(se.synthVoice, eventTime, se.event.velocity, se.event.articulation);
+          this.synth.trigger(se.synthVoice, eventTime, se.event.velocity, se.event.articulation, se.event.pan);
 
           // Trigger UI step update at scheduled time
           if (this.onStepCallback) {

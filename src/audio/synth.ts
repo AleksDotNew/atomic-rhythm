@@ -1,7 +1,7 @@
 export type SynthVoiceName = 'kick' | 'snare' | 'hat' | 'clap' | 'rim';
 
 export interface DrumSynth {
-  trigger(voice: SynthVoiceName, time: number, velocity: number, articulation?: string): void;
+  trigger(voice: SynthVoiceName, time: number, velocity: number, articulation?: string, pan?: number): void;
 }
 
 export function createDrumSynth(ctx: AudioContext): DrumSynth {
@@ -13,7 +13,19 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
     output[i] = Math.random() * 2 - 1;
   }
 
-  const playKick = (time: number, velocity: number) => {
+  const routeAudio = (node: AudioNode, pan?: number) => {
+    if (typeof ctx.createStereoPanner === 'function') {
+      const panner = ctx.createStereoPanner();
+      const clampedPan = Math.max(-1, Math.min(1, pan ?? 0));
+      panner.pan.setValueAtTime(clampedPan, ctx.currentTime);
+      node.connect(panner);
+      panner.connect(ctx.destination);
+    } else {
+      node.connect(ctx.destination);
+    }
+  };
+
+  const playKick = (time: number, velocity: number, pan?: number) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -25,13 +37,13 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    routeAudio(gain, pan);
 
     osc.start(time);
     osc.stop(time + 0.3);
   };
 
-  const playSnare = (time: number, velocity: number) => {
+  const playSnare = (time: number, velocity: number, pan?: number) => {
     // Noise component
     const noise = ctx.createBufferSource();
     noise.buffer = noiseBuffer;
@@ -46,7 +58,7 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
 
     noise.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
+    routeAudio(noiseGain, pan);
 
     // Body tone
     const osc = ctx.createOscillator();
@@ -59,7 +71,7 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
     oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
 
     osc.connect(oscGain);
-    oscGain.connect(ctx.destination);
+    routeAudio(oscGain, pan);
 
     noise.start(time);
     noise.stop(time + 0.22);
@@ -67,7 +79,7 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
     osc.stop(time + 0.2);
   };
 
-  const playHat = (time: number, velocity: number) => {
+  const playHat = (time: number, velocity: number, pan?: number) => {
     const noise = ctx.createBufferSource();
     noise.buffer = noiseBuffer;
 
@@ -82,13 +94,13 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
 
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(ctx.destination);
+    routeAudio(gain, pan);
 
     noise.start(time);
     noise.stop(time + 0.06);
   };
 
-  const playClap = (time: number, velocity: number) => {
+  const playClap = (time: number, velocity: number, pan?: number) => {
     // Multi-burst clap
     const bursts = [0, 0.011, 0.024];
     for (const offset of bursts) {
@@ -105,7 +117,7 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
 
       noise.connect(filter);
       filter.connect(gain);
-      gain.connect(ctx.destination);
+      routeAudio(gain, pan);
 
       noise.start(time + offset);
       noise.stop(time + offset + 0.04);
@@ -121,12 +133,12 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
     tailGain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
     tail.connect(tailFilter);
     tailFilter.connect(tailGain);
-    tailGain.connect(ctx.destination);
+    routeAudio(tailGain, pan);
     tail.start(time + 0.03);
     tail.stop(time + 0.22);
   };
 
-  const playRim = (time: number, velocity: number) => {
+  const playRim = (time: number, velocity: number, pan?: number) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -136,37 +148,37 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    routeAudio(gain, pan);
 
     osc.start(time);
     osc.stop(time + 0.05);
   };
 
   return {
-    trigger(voice: SynthVoiceName, time: number, velocity: number, articulation: string = 'normal') {
+    trigger(voice: SynthVoiceName, time: number, velocity: number, articulation: string = 'normal', pan?: number) {
       const v = Math.max(0.01, Math.min(1.0, velocity));
       const t = Math.max(ctx.currentTime, time);
 
       if (articulation === 'flam') {
         const graceTime = Math.max(ctx.currentTime, t - 0.018);
-        this.trigger(voice, graceTime, v * 0.5, 'normal');
+        this.trigger(voice, graceTime, v * 0.5, 'normal', pan);
       }
 
       switch (voice) {
         case 'kick':
-          playKick(t, v);
+          playKick(t, v, pan);
           break;
         case 'snare':
-          playSnare(t, v);
+          playSnare(t, v, pan);
           break;
         case 'hat':
-          playHat(t, v);
+          playHat(t, v, pan);
           break;
         case 'clap':
-          playClap(t, v);
+          playClap(t, v, pan);
           break;
         case 'rim':
-          playRim(t, v);
+          playRim(t, v, pan);
           break;
       }
     },
