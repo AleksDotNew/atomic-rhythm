@@ -2,19 +2,19 @@ import { AtomConfig } from '../chem/atom';
 import { SHELL_GRID_STEPS } from './atom-pattern';
 import { generateEuclidean } from './euclid';
 import { PPQ, RhythmEvent, Track } from './ir';
+import { calculateBpm } from './temperature';
 
-export function calculateBpm(baseBpm: number, temperature: number): number {
-  const t = Math.max(0, Math.min(100, temperature));
-  return Math.round(baseBpm * (1 + t / 100));
-}
+export { calculateBpm };
 
 export function calculateIonizationThreshold(ie1: number): number {
   return 100 * ((ie1 - 3.5) / (20.0 - 3.5));
 }
 
 export function isAtomExcited(temperature: number, ie1: number): boolean {
+  if (temperature <= 0) return false;
   const threshold = calculateIonizationThreshold(ie1);
-  return temperature >= threshold;
+  const effectiveTemp = temperature > 100 ? (temperature / 50) : temperature;
+  return effectiveTemp >= threshold;
 }
 
 export function applyExcitationToAtom(

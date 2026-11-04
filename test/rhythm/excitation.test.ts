@@ -9,10 +9,11 @@ import {
 } from '../../src/rhythm/excitation';
 
 describe('Excitation Engine', () => {
-  it('increases BPM linearly with temperature T in [0..100]', () => {
+  it('calculates BPM non-linearly with temperature T', () => {
+    expect(calculateBpm(120, -273.15)).toBe(1);
     expect(calculateBpm(120, 0)).toBe(120);
-    expect(calculateBpm(120, 50)).toBe(180);
-    expect(calculateBpm(120, 100)).toBe(240);
+    expect(calculateBpm(120, 100)).toBe(154);
+    expect(calculateBpm(120, 5000)).toBe(360);
   });
 
   it('determines excitation thresholds for alkali metals (Na) vs noble gases (He)', () => {
