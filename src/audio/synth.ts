@@ -1,7 +1,11 @@
+import type { SampleBank } from './samples';
+
 export type SynthVoiceName = 'kick' | 'snare' | 'hat' | 'clap' | 'rim' | 'openhat' | 'crash';
 
 export interface DrumSynth {
   trigger(voice: SynthVoiceName, time: number, velocity: number, articulation?: string, pan?: number): void;
+  setSampleBank(bank: SampleBank | null): void;
+  getSampleBank(): SampleBank | null;
 }
 
 export function createDrumSynth(ctx: AudioContext): DrumSynth {
@@ -80,6 +84,20 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
   };
 
   let activeOpenHatGain: GainNode | null = null;
+  let activeSampleBank: SampleBank | null = null;
+
+  const playSample = (buffer: AudioBuffer, time: number, velocity: number, pan?: number, isOpenHat: boolean = false) => {
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(velocity, time);
+    source.connect(gain);
+    routeAudio(gain, pan);
+    if (isOpenHat) {
+      activeOpenHatGain = gain;
+    }
+    source.start(time);
+  };
 
   const playHat = (time: number, velocity: number, pan?: number) => {
     // Choke open hat if currently sustaining
@@ -229,6 +247,12 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
   };
 
   return {
+    setSampleBank(bank: SampleBank | null) {
+      activeSampleBank = bank;
+    },
+    getSampleBank(): SampleBank | null {
+      return activeSampleBank;
+    },
     trigger(voice: SynthVoiceName, time: number, velocity: number, articulation: string = 'normal', pan?: number) {
       const v = Math.max(0.01, Math.min(1.0, velocity));
       const t = Math.max(ctx.currentTime, time);
@@ -236,6 +260,24 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
       if (articulation === 'flam') {
         const graceTime = Math.max(ctx.currentTime, t - 0.018);
         this.trigger(voice, graceTime, v * 0.5, 'normal', pan);
+      }
+
+      if (voice === 'hat' && activeOpenHatGain) {
+        try {
+          activeOpenHatGain.gain.cancelScheduledValues(t);
+          activeOpenHatGain.gain.setValueAtTime(0.001, t);
+        } catch {
+          // Safe fallback
+        }
+        activeOpenHatGain = null;
+      }
+
+      if (activeSampleBank && activeSampleBank.hasVoice(voice)) {
+        const sampleBuf = activeSampleBank.getBuffer(voice);
+        if (sampleBuf) {
+          playSample(sampleBuf, t, v, pan, voice === 'openhat');
+          return;
+        }
       }
 
       switch (voice) {
