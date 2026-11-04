@@ -132,11 +132,34 @@ describe('App interactive UI and Modulation Matrix', () => {
     const options = Array.from(bankSelect?.querySelectorAll('option') || []).map(o => o.value);
     expect(options).toContain('procedural');
     expect(options).toContain('strudel-dirt');
+    expect(options).toContain('custom');
     expect(options).toContain('local');
 
     // Status badge
     const statusBadge = root.querySelector('#soundbank-status');
     expect(statusBadge?.textContent).toContain('Synth');
+
+    // Soundbank manager modal and samples list
+    const modal = root.querySelector('#modal-soundbank');
+    expect(modal).toBeTruthy();
+    const samplesList = root.querySelector('#modal-samples-list');
+    expect(samplesList).toBeTruthy();
+
+    // Atoms per bar supports expanded range (up to 64) and Fit 1 Bar button exists
+    const inputApb = root.querySelector('#input-apb') as HTMLInputElement | null;
+    expect(inputApb).toBeTruthy();
+    expect(inputApb?.max).toBe('64');
+
+    const btnFit = root.querySelector('#btn-fit-bars') as HTMLButtonElement | null;
+    expect(btnFit).toBeTruthy();
+    btnFit?.click();
+    // In Benzene (12 atoms: 6 C + 6 H), Fit 1 Bar sets atomsPerBar to 12
+    expect(inputApb?.value).toBe('12');
+
+    // Sequence selector contains electronegativity (oxidizer priority)
+    const seqSelect = root.querySelector('#select-order-strategy') as HTMLSelectElement | null;
+    const seqOptions = Array.from(seqSelect?.querySelectorAll('option') || []).map(o => o.value);
+    expect(seqOptions).toContain('electronegativity');
 
     // File input
     const fileInput = root.querySelector('#input-sample-files') as HTMLInputElement | null;

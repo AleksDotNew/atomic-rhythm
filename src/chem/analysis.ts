@@ -29,7 +29,7 @@ export interface StructuralUnit {
   };
 }
 
-export type OrderStrategy = 'structural' | 'bondWeight' | 'mass' | 'custom';
+export type OrderStrategy = 'structural' | 'bondWeight' | 'mass' | 'electronegativity' | 'custom';
 
 export interface MolecularAnalysis {
   readonly rings: readonly RingInfo[];
@@ -159,6 +159,16 @@ export function computeOrderedSequence(
     return Array.from({ length: mol.atoms.length }, (_, i) => i).sort(
       (a, b) => mol.atoms[b].element.atomicMass - mol.atoms[a].element.atomicMass
     );
+  }
+
+  if (strategy === 'electronegativity') {
+    return Array.from({ length: mol.atoms.length }, (_, i) => i).sort((a, b) => {
+      const chiA = mol.atoms[a].element.electronegativity ?? 2.2;
+      const chiB = mol.atoms[b].element.electronegativity ?? 2.2;
+      const diff = chiB - chiA;
+      if (Math.abs(diff) > 0.001) return diff;
+      return mol.atoms[b].element.atomicMass - mol.atoms[a].element.atomicMass;
+    });
   }
 
   return [...analysis.traversalOrder];

@@ -4,7 +4,7 @@ import { MoleculePreset, PRESETS } from '../chem/presets';
 import { parseSmiles } from '../chem/smiles';
 import { AudioScheduler } from '../audio/scheduler';
 import { createDrumSynth, DrumSynth, SynthVoiceName } from '../audio/synth';
-import { createSampleBank, SampleBank } from '../audio/samples';
+import { createSampleBank, SampleBank, samples } from '../audio/samples';
 import { exportToMidi } from '../export/midi';
 import { exportToStrudel } from '../export/strudel';
 import { isAtomExcited } from '../rhythm/excitation';
@@ -49,6 +49,7 @@ export class App {
   private drumSynth: DrumSynth | null = null;
   private scheduler: AudioScheduler | null = null;
   private activeSampleBank: SampleBank | null = null;
+  private activeSamplesSpec: string | null = null;
 
   private svgView!: MoleculeSvgView;
   private seqView!: SequencerGridView;
@@ -111,6 +112,7 @@ export class App {
               <option value="structural">Structural (Ring Cycle)</option>
               <option value="bondWeight">Bond Weight Priority</option>
               <option value="mass">Atomic Mass (Z)</option>
+              <option value="electronegativity">Electronegativity (Oxidizer Priority)</option>
               <option value="custom">Custom Order</option>
             </select>
           </div>
@@ -124,8 +126,9 @@ export class App {
           </div>
 
           <div class="control-group">
-            <label for="input-apb">Atoms/Bar</label>
-            <input type="number" id="input-apb" value="2" min="1" max="8" style="width: 50px;" />
+            <label for="input-apb">Atoms/Bar <span id="apb-subdivision" style="color: var(--accent-cyan); font-size: 0.72rem; margin-left: 2px;">(1/2)</span></label>
+            <input type="number" id="input-apb" value="2" min="1" max="64" style="width: 55px;" />
+            <button id="btn-fit-bars" class="btn-xs" style="margin-left: 4px;" title="Fit all molecule atoms into 1 bar">Fit 1 Bar</button>
           </div>
 
           <div class="control-group">
@@ -133,9 +136,10 @@ export class App {
             <select id="select-soundbank">
               <option value="procedural">Procedural Synth</option>
               <option value="strudel-dirt">Strudel Dirt (CDN)</option>
+              <option value="custom">Custom samples(...) URL...</option>
               <option value="local">Load Audio Files...</option>
             </select>
-            <span id="soundbank-status" class="bank-badge bank-badge-synth" title="Active audio soundbank">Synth</span>
+            <span id="soundbank-status" class="bank-badge bank-badge-synth" title="Active audio soundbank. Click to view loaded samples." style="cursor: pointer;">Synth</span>
             <input type="file" id="input-sample-files" multiple accept="audio/*" style="display: none;" />
           </div>
         </div>
@@ -191,6 +195,31 @@ export class App {
           </div>
         </section>
       </main>
+
+      <dialog id="modal-soundbank" class="soundbank-modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Soundbank Manager</h3>
+            <button id="btn-close-soundbank-modal" class="btn-xs">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="soundbank-summary">
+              <span>Active Bank: <b id="modal-bank-name" style="color: var(--accent-cyan);">Procedural Synth</b></span>
+            </div>
+            <h4 style="margin: 12px 0 6px 0; font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase;">Loaded Voice Samples (Strudel / Dirt)</h4>
+            <div id="modal-samples-list" class="samples-status-grid"></div>
+
+            <div class="input-block" style="margin-top: 14px;">
+              <label for="input-custom-spec">Load via samples(...) URL or GitHub repository:</label>
+              <input type="text" id="input-custom-spec" placeholder="github:tidalcycles/dirt-samples" value="github:tidalcycles/dirt-samples" />
+              <div class="modal-actions" style="margin-top: 8px; display: flex; gap: 8px;">
+                <button id="btn-load-custom-spec" class="btn-primary btn-xs">Load Strudel Samples</button>
+                <button id="btn-load-dirt-preset" class="btn-secondary btn-xs">Strudel Dirt Preset</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </dialog>
     `;
 
     // Initialize views
@@ -508,6 +537,39 @@ export class App {
     }
   }
 
+  private renderSoundbankModal(root: HTMLElement): void {
+    const modalBankName = root.querySelector('#modal-bank-name') as HTMLElement | null;
+    const samplesList = root.querySelector('#modal-samples-list') as HTMLElement | null;
+    if (modalBankName) {
+      modalBankName.textContent = this.activeSampleBank ? this.activeSampleBank.name : 'Procedural Synth (Default)';
+    }
+    if (samplesList) {
+      const allVoices: { voice: SynthVoiceName; label: string }[] = [
+        { voice: 'kick', label: 'Kick (bd)' },
+        { voice: 'snare', label: 'Snare (sd)' },
+        { voice: 'hat', label: 'Closed Hat (hh)' },
+        { voice: 'openhat', label: 'Open Hat (oh)' },
+        { voice: 'crash', label: 'Crash (cr)' },
+        { voice: 'clap', label: 'Clap (cp)' },
+        { voice: 'rim', label: 'Rimshot (rim)' },
+      ];
+
+      samplesList.innerHTML = allVoices
+        .map(({ voice, label }) => {
+          const hasSample = this.activeSampleBank?.hasVoice(voice);
+          const buf = this.activeSampleBank?.getBuffer(voice);
+          const durationStr = buf ? ` (${buf.duration.toFixed(2)}s)` : '';
+          return `
+            <div class="sample-slot ${hasSample ? 'slot-loaded' : 'slot-procedural'}">
+              <span class="slot-name">${label}</span>
+              <span class="slot-status">${hasSample ? `✅ Sample${durationStr}` : '⚡ Procedural'}</span>
+            </div>
+          `;
+        })
+        .join('');
+    }
+  }
+
   private bindEvents(root: HTMLElement): void {
     const btnPlay = root.querySelector('#btn-play') as HTMLButtonElement;
     const inputBpm = root.querySelector('#input-bpm') as HTMLInputElement;
@@ -527,12 +589,84 @@ export class App {
     const selectSoundbank = root.querySelector('#select-soundbank') as HTMLSelectElement | null;
     const soundbankStatus = root.querySelector('#soundbank-status') as HTMLElement | null;
     const inputSampleFiles = root.querySelector('#input-sample-files') as HTMLInputElement | null;
+    const modalSoundbank = root.querySelector('#modal-soundbank') as HTMLDialogElement | null;
+    const btnCloseModal = root.querySelector('#btn-close-soundbank-modal') as HTMLButtonElement | null;
+    const btnLoadCustomSpec = root.querySelector('#btn-load-custom-spec') as HTMLButtonElement | null;
+    const btnLoadDirtPreset = root.querySelector('#btn-load-dirt-preset') as HTMLButtonElement | null;
+    const inputCustomSpec = root.querySelector('#input-custom-spec') as HTMLInputElement | null;
+
+    const openSoundbankModal = () => {
+      this.renderSoundbankModal(root);
+      try {
+        modalSoundbank?.showModal();
+      } catch {
+        if (modalSoundbank) modalSoundbank.style.display = 'block';
+      }
+    };
+
+    const closeSoundbankModal = () => {
+      try {
+        modalSoundbank?.close();
+      } catch {
+        if (modalSoundbank) modalSoundbank.style.display = 'none';
+      }
+    };
+
+    soundbankStatus?.addEventListener('click', () => {
+      openSoundbankModal();
+    });
+
+    btnCloseModal?.addEventListener('click', () => {
+      closeSoundbankModal();
+    });
+
+    const loadSpec = async (specVal: string) => {
+      this.initAudio();
+      if (!this.audioCtx) return;
+      if (soundbankStatus) {
+        soundbankStatus.textContent = 'Loading...';
+        soundbankStatus.className = 'bank-badge bank-badge-loading';
+      }
+      try {
+        const bank = await samples(this.audioCtx, specVal);
+        this.activeSampleBank = bank;
+        this.activeSamplesSpec = specVal;
+        this.drumSynth?.setSampleBank(bank);
+        if (soundbankStatus) {
+          const loadedCount = (['kick', 'snare', 'hat', 'openhat', 'crash', 'clap', 'rim'] as SynthVoiceName[])
+            .filter(v => bank.hasVoice(v)).length;
+          soundbankStatus.textContent = `Samples (${loadedCount}/7)`;
+          soundbankStatus.className = 'bank-badge bank-badge-loaded';
+        }
+        if (selectSoundbank) {
+          selectSoundbank.value = 'custom';
+        }
+        this.renderSoundbankModal(root);
+      } catch {
+        if (soundbankStatus) {
+          soundbankStatus.textContent = 'Load Failed';
+          soundbankStatus.className = 'bank-badge bank-badge-error';
+        }
+      }
+    };
+
+    btnLoadCustomSpec?.addEventListener('click', () => {
+      const spec = inputCustomSpec?.value.trim() || 'github:tidalcycles/dirt-samples';
+      loadSpec(spec);
+    });
+
+    btnLoadDirtPreset?.addEventListener('click', () => {
+      if (inputCustomSpec) inputCustomSpec.value = 'github:tidalcycles/dirt-samples';
+      loadSpec('github:tidalcycles/dirt-samples');
+    });
 
     selectSoundbank?.addEventListener('change', async () => {
       const mode = selectSoundbank.value;
       this.initAudio();
 
       if (mode === 'procedural') {
+        this.activeSamplesSpec = null;
+        this.activeSampleBank = null;
         this.drumSynth?.setSampleBank(null);
         if (soundbankStatus) {
           soundbankStatus.textContent = 'Synth';
@@ -548,6 +682,7 @@ export class App {
           const bank = createSampleBank(this.audioCtx, 'Strudel Dirt');
           const result = await bank.loadFromUrl();
           this.activeSampleBank = bank;
+          this.activeSamplesSpec = 'github:tidalcycles/dirt-samples';
           this.drumSynth?.setSampleBank(bank);
           if (soundbankStatus) {
             soundbankStatus.textContent = `Strudel (${result.loaded}/7)`;
@@ -559,6 +694,8 @@ export class App {
             soundbankStatus.className = 'bank-badge bank-badge-error';
           }
         }
+      } else if (mode === 'custom') {
+        openSoundbankModal();
       } else if (mode === 'local') {
         inputSampleFiles?.click();
       }
@@ -577,6 +714,7 @@ export class App {
           const bank = createSampleBank(this.audioCtx, 'Local Samples');
           const count = await bank.loadLocalFiles(files);
           this.activeSampleBank = bank;
+          this.activeSamplesSpec = 'local';
           this.drumSynth?.setSampleBank(bank);
           if (soundbankStatus) {
             soundbankStatus.textContent = `Local (${count})`;
@@ -593,7 +731,9 @@ export class App {
           selectSoundbank.value = this.activeSampleBank
             ? this.activeSampleBank.name === 'Strudel Dirt'
               ? 'strudel-dirt'
-              : 'local'
+              : this.activeSampleBank.name === 'Local Samples'
+              ? 'local'
+              : 'custom'
             : 'procedural';
         }
       }
@@ -714,9 +854,36 @@ export class App {
       this.updateAll();
     });
 
-    // Atoms per bar
+    // Atoms per bar & Fit 1 Bar
+    const apbSubdivision = root.querySelector('#apb-subdivision') as HTMLElement | null;
+    const btnFitBars = root.querySelector('#btn-fit-bars') as HTMLButtonElement | null;
+
+    const formatSubdivision = (apb: number): string => {
+      if (apb === 1) return '(1/1)';
+      if (apb === 2) return '(1/2)';
+      if (apb === 4) return '(1/4)';
+      if (apb === 8) return '(1/8)';
+      if (apb === 16) return '(1/16)';
+      if (apb === 32) return '(1/32)';
+      if (apb === 64) return '(1/64)';
+      return `(~${Math.round(384 / apb)}t)`;
+    };
+
+    btnFitBars?.addEventListener('click', () => {
+      const count = Math.max(1, Math.min(64, this.currentMolecule.atoms.length));
+      this.atomsPerBar = count;
+      inputApb.value = String(count);
+      if (apbSubdivision) {
+        apbSubdivision.textContent = formatSubdivision(count);
+      }
+      this.updateAll();
+    });
+
     inputApb.addEventListener('change', () => {
-      this.atomsPerBar = Math.max(1, Math.min(8, parseInt(inputApb.value, 10) || 2));
+      this.atomsPerBar = Math.max(1, Math.min(64, parseInt(inputApb.value, 10) || 2));
+      if (apbSubdivision) {
+        apbSubdivision.textContent = formatSubdivision(this.atomsPerBar);
+      }
       this.updateAll();
     });
 
@@ -739,7 +906,12 @@ export class App {
 
     // Strudel Export
     btnExportStrudel.addEventListener('click', async () => {
-      const code = exportToStrudel(this.currentPattern);
+      const code = exportToStrudel(this.currentPattern, {
+        samplesDeclaration: this.activeSamplesSpec && this.activeSamplesSpec !== 'local'
+          ? `samples('${this.activeSamplesSpec}')`
+          : undefined,
+        compact: true,
+      });
       try {
         await navigator.clipboard.writeText(code);
         const originalText = btnExportStrudel.textContent;

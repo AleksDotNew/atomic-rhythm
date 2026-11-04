@@ -719,3 +719,79 @@ main.dashboard {
   color: var(--text-main);
 }
 
+/* Soundbank Modal Dialog */
+.soundbank-modal {
+  background: var(--bg-panel);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+  padding: 0;
+  max-width: 480px;
+  width: 90vw;
+}
+
+.soundbank-modal::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(3px);
+}
+
+.modal-content {
+  padding: 16px 20px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
+.samples-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.sample-slot {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+}
+
+.sample-slot .slot-name {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.sample-slot .slot-status {
+  font-size: 0.7rem;
+  margin-top: 2px;
+}
+
+.slot-loaded {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.08);
+}
+
+.slot-loaded .slot-status {
+  color: #34d399;
+}
+
+.slot-procedural .slot-status {
+  color: #94a3b8;
+}
+

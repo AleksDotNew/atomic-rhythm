@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseSmiles } from '../../src/chem/smiles';
-import { analyzeMolecule, findKeyNodalAtoms } from '../../src/chem/analysis';
+import { analyzeMolecule, findKeyNodalAtoms, computeOrderedSequence } from '../../src/chem/analysis';
 
 describe('analyzeMolecule', () => {
   it('detects 6-membered aromatic ring in benzene c1ccccc1', () => {
@@ -94,6 +94,10 @@ describe('analyzeMolecule', () => {
 
     // Bond weight priority: C (weight 6) and O (weight 3) come before H (weight 1.5)
     expect(analysis.atomBondWeights[0]).toBeGreaterThan(analysis.atomBondWeights[3]); // C vs H
+
+    // Electronegativity / oxidizer priority: O (chi = 3.44) comes before C (2.55) and H (2.20)
+    const electroOrder = computeOrderedSequence(ethanol, analysis, 'electronegativity');
+    expect(ethanol.atoms[electroOrder[0]].element.symbol).toBe('O');
   });
 
   it('detects key nodal atoms: bridgeheads in bicyclic systems and hubs in branched molecules', () => {

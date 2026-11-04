@@ -43,16 +43,16 @@
   ```
 - Handles aliases: `bd` $\to$ `kick`, `sd` $\to$ `snare`, `hh` $\to$ `hat`, `oh` $\to$ `openhat`, `cr` $\to$ `crash`, `cp` $\to$ `clap`, `rim` $\to$ `rim`.
 
-- [ ] **Step 1: Write unit tests for `samples(...)`**
+- [x] **Step 1: Write unit tests for `samples(...)`**
   - Test resolving GitHub shorthand: `github:tidalcycles/dirt-samples` $\to$ `https://raw.githubusercontent.com/tidalcycles/dirt-samples/master/...`
   - Test resolving direct directory URL with trailing slash.
   - Test loading from dictionary object `{ bd: 'http://.../1.wav', sd: 'http://.../2.wav' }`.
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
   - Run `npx vitest run test/audio/samples.test.ts`.
-- [ ] **Step 3: Implement `resolveSampleUrl` and `samples` in `src/audio/samples.ts`**
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 3: Implement `resolveSampleUrl` and `samples` in `src/audio/samples.ts`**
+- [x] **Step 4: Run tests and verify they pass**
   - Run `npx vitest run test/audio/samples.test.ts`.
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
   - `git commit -m "feat(audio): declarative samples loader supporting GitHub shorthand, directory URLs, and dictionaries"`
 
 ---
@@ -73,16 +73,16 @@
   ```
 - Ensures zero cumulative rounding drift across any number of bars and supports rapid $1/32$ ticks (12 ticks) when atomsPerBar = 32.
 
-- [ ] **Step 1: Write unit tests for expanded atomsPerBar (16, 24, 32) and zero drift**
+- [x] **Step 1: Write unit tests for expanded atomsPerBar (16, 24, 32) and zero drift**
   - Test `atomsPerBar: 16` distributes 16 atoms across 1 bar at 24 ticks each ($1/16$).
   - Test `atomsPerBar: 32` distributes 32 atoms across 1 bar at 12 ticks each ($1/32$).
   - Test non-power-of-2 `atomsPerBar: 5` has exact total cycle alignment without drift.
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
   - Run `npx vitest run test/rhythm/molecule-pattern.test.ts`.
-- [ ] **Step 3: Implement precise tick scheduling in `src/rhythm/molecule-pattern.ts`**
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 3: Implement precise tick scheduling in `src/rhythm/molecule-pattern.ts`**
+- [x] **Step 4: Run tests and verify they pass**
   - Run `npx vitest run test/rhythm/molecule-pattern.test.ts`.
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
   - `git commit -m "feat(rhythm): precision timing for expanded atomsPerBar supporting 1/1 to 1/32 durations"`
 
 ---
@@ -112,52 +112,52 @@
   2. Run-length pause compression: replace 3+ consecutive `~` with `~!3` (e.g. `bd ~!7 bd ~!7`).
   3. Prepend `samples(...)` declaration if specified or if custom samplebank is active.
 
-- [ ] **Step 1: Write unit tests for algorithmic Strudel export**
+- [x] **Step 1: Write unit tests for algorithmic Strudel export**
   - Test run-length pause compression: `~!7` instead of 7 tildes.
   - Test Euclidean pattern formatting: `bd(3,8)` for 3 hits evenly spaced in 8 steps.
   - Test inclusion of `samples(...)` header when options.samplesDeclaration is provided.
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
   - Run `npx vitest run test/export/export.test.ts`.
-- [ ] **Step 3: Implement algorithmic compression and samples header in `src/export/strudel.ts`**
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 3: Implement algorithmic compression and samples header in `src/export/strudel.ts`**
+- [x] **Step 4: Run tests and verify they pass**
   - Run `npx vitest run test/export/export.test.ts`.
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
   - `git commit -m "feat(export): compact algorithmic Strudel exporter with Euclidean syntax and rest compression"`
 
 ---
 
-### Task 4: UI Controls for Custom Samples Modal & Expanded Atoms/Bar Input
+### Task 4: UI Controls for Custom Samples Modal, Sample List, Electronegativity & Expanded Atoms/Bar
 
 **Files:**
+- Modify: `src/chem/analysis.ts`
 - Modify: `src/ui/app.ts`
 - Modify: `src/style.css`
+- Test: `test/chem/analysis.test.ts`
 - Test: `test/ui/app.test.ts`
 
 **Interfaces:**
-- `input-apb`: change `min="1" max="8"` $\to$ `min="1" max="64"` with tooltip showing note duration (e.g. `1/1`, `1/2`, `1/4`, `1/8`, `1/16`, `1/32`).
+- `input-apb`: expanded `min="1" max="64"` with `#apb-note-subdivision` badge (`1/1`, `1/2`, `1/4`, `1/8`, `1/16`, `1/32`) and `#btn-fit-bars` button.
+- `OrderStrategy`: add `'electronegativity'` for oxidizer priority sequencing.
 - `select-soundbank`:
   - Add `<option value="custom">Custom samples(...) URL...</option>`
-  - Dialog/Prompt for custom samples input (`github:...`, directory URL, or JSON dictionary).
-  - Quick preset buttons: Strudel Dirt, Drum Machines 808/909.
-- Pass active sample declaration to `exportToStrudel` when exporting.
+  - Soundbank Manager modal `#modal-soundbank`:
+    - Shows loaded state for all 7 voices (kick, snare, hat, openhat, crash, clap, rim).
+    - Text input for custom GitHub repo shorthand or URL.
+    - Strudel Dirt preset button.
+- Active sample declaration forwarded to `exportToStrudel` on copy/export.
 
-- [ ] **Step 1: Write UI unit tests for custom samples and expanded atomsPerBar**
-  - Test `input-apb` accepts up to 32/64.
-  - Test custom soundbank option exists in select dropdown.
-- [ ] **Step 2: Run test to confirm failure**
-  - Run `npx vitest run test/ui/app.test.ts`.
-- [ ] **Step 3: Implement UI modal/dialog and input range in `src/ui/app.ts` and `src/style.css`**
-- [ ] **Step 4: Run tests and verify they pass**
-  - Run `npx vitest run test/ui/app.test.ts`.
-- [ ] **Step 5: Commit changes**
-  - `git commit -m "feat(ui): custom samples modal dialog and expanded atoms per bar range"`
+- [x] **Step 1: Write unit tests for electronegativity ordering and UI controls**
+- [x] **Step 2: Run tests to confirm failure**
+- [x] **Step 3: Implement electronegativity ordering, Soundbank Manager modal with sample list, and expanded Atoms/Bar**
+- [x] **Step 4: Run tests and verify they pass**
+- [x] **Step 5: Commit changes**
 
 ---
 
 ### Task 5: Full System Verification, Build & Push
 
-- [ ] **Step 1: Run complete test suite (`npm test`)**
+- [x] **Step 1: Run complete test suite (`npm test`)**
   - Verify all 19+ test files pass 100%.
-- [ ] **Step 2: Run production build (`npm run build`)**
+- [x] **Step 2: Run production build (`npm run build`)**
   - Verify singlefile bundle `dist/index.html` builds without errors.
-- [ ] **Step 3: Push to origin main (`git push origin main`)**
+- [x] **Step 3: Push to origin main (`git push origin main`)**
