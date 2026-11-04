@@ -1,4 +1,4 @@
-export type SynthVoiceName = 'kick' | 'snare' | 'hat' | 'clap' | 'rim';
+export type SynthVoiceName = 'kick' | 'snare' | 'hat' | 'clap' | 'rim' | 'openhat' | 'crash';
 
 export interface DrumSynth {
   trigger(voice: SynthVoiceName, time: number, velocity: number, articulation?: string, pan?: number): void;
@@ -79,7 +79,20 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
     osc.stop(time + 0.2);
   };
 
+  let activeOpenHatGain: GainNode | null = null;
+
   const playHat = (time: number, velocity: number, pan?: number) => {
+    // Choke open hat if currently sustaining
+    if (activeOpenHatGain) {
+      try {
+        activeOpenHatGain.gain.cancelScheduledValues(time);
+        activeOpenHatGain.gain.setValueAtTime(0.001, time);
+      } catch {
+        // Safe fallback
+      }
+      activeOpenHatGain = null;
+    }
+
     const noise = ctx.createBufferSource();
     noise.buffer = noiseBuffer;
 
@@ -98,6 +111,67 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
 
     noise.start(time);
     noise.stop(time + 0.06);
+  };
+
+  const playOpenHat = (time: number, velocity: number, pan?: number) => {
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(6800, time);
+    filter.Q.setValueAtTime(2.5, time);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(velocity * 0.75, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.42);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    routeAudio(gain, pan);
+
+    activeOpenHatGain = gain;
+    noise.start(time);
+    noise.stop(time + 0.45);
+  };
+
+  const playCrash = (time: number, velocity: number, pan?: number) => {
+    // 1. Noise wash component
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.setValueAtTime(4500, time);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(velocity * 0.6, time);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 1.4);
+
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    routeAudio(noiseGain, pan);
+
+    noise.start(time);
+    noise.stop(time + 1.45);
+
+    // 2. Inharmonic metallic multi-sine bank (6 detuned frequencies)
+    const freqs = [420, 595, 840, 1190, 1680, 2380];
+    for (const f of freqs) {
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, time);
+
+      oscGain.gain.setValueAtTime((velocity * 0.22) / freqs.length, time);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, time + 1.6);
+
+      osc.connect(oscGain);
+      routeAudio(oscGain, pan);
+
+      osc.start(time);
+      osc.stop(time + 1.65);
+    }
   };
 
   const playClap = (time: number, velocity: number, pan?: number) => {
@@ -179,6 +253,12 @@ export function createDrumSynth(ctx: AudioContext): DrumSynth {
           break;
         case 'rim':
           playRim(t, v, pan);
+          break;
+        case 'openhat':
+          playOpenHat(t, v, pan);
+          break;
+        case 'crash':
+          playCrash(t, v, pan);
           break;
       }
     },

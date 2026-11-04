@@ -87,4 +87,53 @@ describe('Audio Scheduler logic', () => {
     expect(createdNodes).toContain('StereoPannerNode');
     expect(pannedValue).toBeCloseTo(0.65, 2);
   });
+
+  it('triggers crash and openhat procedural voices without throwing', () => {
+    const oscCount: string[] = [];
+    const mockCtx = {
+      sampleRate: 44100,
+      currentTime: 0,
+      destination: {},
+      createBuffer: () => ({ getChannelData: () => new Float32Array(44100) }),
+      createOscillator: () => {
+        oscCount.push('osc');
+        return {
+          type: 'sine',
+          frequency: { setValueAtTime: () => {}, exponentialRampToValueAtTime: () => {} },
+          connect: () => {},
+          start: () => {},
+          stop: () => {},
+        };
+      },
+      createGain: () => ({
+        gain: { setValueAtTime: () => {}, exponentialRampToValueAtTime: () => {}, linearRampToValueAtTime: () => {} },
+        connect: () => {},
+      }),
+      createBiquadFilter: () => ({
+        type: 'bandpass',
+        frequency: { setValueAtTime: () => {} },
+        Q: { setValueAtTime: () => {} },
+        connect: () => {},
+      }),
+      createBufferSource: () => ({
+        buffer: null,
+        connect: () => {},
+        start: () => {},
+        stop: () => {},
+      }),
+      createStereoPanner: () => ({
+        pan: { setValueAtTime: () => {} },
+        connect: () => {},
+      }),
+    } as unknown as AudioContext;
+
+    const synth = createDrumSynth(mockCtx);
+
+    // Openhat
+    expect(() => synth.trigger('openhat', 0.1, 0.9, 'normal', -0.2)).not.toThrow();
+
+    // Crash uses metallic multi-oscillator bank + noise
+    expect(() => synth.trigger('crash', 0.2, 1.0, 'normal', 0.3)).not.toThrow();
+    expect(oscCount.length).toBeGreaterThanOrEqual(4);
+  });
 });
