@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createSampleBank, STRUDEL_VOICE_SAMPLE_PATHS } from '../../src/audio/samples';
+import { createSampleBank, STRUDEL_VOICE_SAMPLE_PATHS, resolveSampleUrl, samples } from '../../src/audio/samples';
 import { createDrumSynth } from '../../src/audio/synth';
 
 describe('SampleBank Engine', () => {
@@ -104,4 +104,48 @@ describe('SampleBank Engine', () => {
     synth.trigger('rim', 0.2, 0.8, 'normal', 0.0);
     expect(oscStarted).toContain('osc');
   });
+
+  describe('Declarative samples(...) API', () => {
+    it('resolves github: shorthand and http URLs correctly', () => {
+      const url1 = resolveSampleUrl('github:tidalcycles/dirt-samples', 'bd/0.wav');
+      expect(url1).toBe('https://raw.githubusercontent.com/tidalcycles/dirt-samples/master/bd/0.wav');
+
+      const url2 = resolveSampleUrl('https://example.com/audio', 'hh/0.wav');
+      expect(url2).toBe('https://example.com/audio/hh/0.wav');
+
+      const url3 = resolveSampleUrl('https://example.com/audio/', 'hh/0.wav');
+      expect(url3).toBe('https://example.com/audio/hh/0.wav');
+    });
+
+    it('loads samples from a dictionary mapping aliases (bd, sd) to audio URLs', async () => {
+      const mockBuffer = { duration: 0.3 } as AudioBuffer;
+      const mockCtx = {
+        sampleRate: 44100,
+        decodeAudioData: vi.fn().mockResolvedValue(mockBuffer),
+      } as unknown as AudioContext;
+
+      // Mock global fetch
+      const globalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(100)),
+      }) as unknown as typeof fetch;
+
+      try {
+        const bank = await samples(mockCtx, {
+          bd: 'https://example.com/audio/kick.wav',
+          sd: 'https://example.com/audio/snare.wav',
+          hh: 'https://example.com/audio/hat.wav',
+        });
+
+        expect(bank.hasVoice('kick')).toBe(true);
+        expect(bank.hasVoice('snare')).toBe(true);
+        expect(bank.hasVoice('hat')).toBe(true);
+        expect(bank.getBuffer('kick')).toBe(mockBuffer);
+      } finally {
+        globalThis.fetch = globalFetch;
+      }
+    });
+  });
 });
+
