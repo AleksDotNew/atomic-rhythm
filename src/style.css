@@ -147,10 +147,13 @@ button.btn-secondary:hover {
 /* Main Dashboard Grid */
 main.dashboard {
   display: grid;
-  grid-template-columns: 290px 1fr 340px;
+  grid-template-columns: 290px minmax(0, 1fr) 340px;
   gap: 16px;
   padding: 16px;
   flex: 1;
+  min-width: 0;
+  max-width: 100vw;
+  box-sizing: border-box;
 }
 
 @media (max-width: 1180px) {
@@ -167,6 +170,7 @@ main.dashboard {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
 }
 
 .panel h2 {
@@ -254,6 +258,8 @@ main.dashboard {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .svg-container {
@@ -267,7 +273,68 @@ main.dashboard {
 }
 
 .sequencer-container {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.sequencer-wrapper {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  box-sizing: border-box;
+}
+
+/* Custom sleek scrollbars for horizontal sequencer & vertical lists */
+.sequencer-wrapper::-webkit-scrollbar,
+.sequencer-container::-webkit-scrollbar,
+.preset-list::-webkit-scrollbar,
+.routes-list::-webkit-scrollbar,
+.atom-pills-container::-webkit-scrollbar {
+  height: 8px;
+  width: 6px;
+}
+
+.sequencer-wrapper::-webkit-scrollbar-track,
+.sequencer-container::-webkit-scrollbar-track,
+.preset-list::-webkit-scrollbar-track,
+.routes-list::-webkit-scrollbar-track,
+.atom-pills-container::-webkit-scrollbar-track {
+  background: #090d16;
+  border-radius: 4px;
+}
+
+.sequencer-wrapper::-webkit-scrollbar-thumb,
+.sequencer-container::-webkit-scrollbar-thumb,
+.preset-list::-webkit-scrollbar-thumb,
+.routes-list::-webkit-scrollbar-thumb,
+.atom-pills-container::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.sequencer-wrapper::-webkit-scrollbar-thumb:hover,
+.sequencer-container::-webkit-scrollbar-thumb:hover,
+.preset-list::-webkit-scrollbar-thumb:hover,
+.routes-list::-webkit-scrollbar-thumb:hover,
+.atom-pills-container::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+.sequencer-header-row,
+.sequencer-row {
+  min-width: max-content;
+}
+
+.sequencer-header-row .seq-header-label,
+.sequencer-row .track-label {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: #0f172a;
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.6);
 }
 
 /* Sequencer Step & Part Highlighting */

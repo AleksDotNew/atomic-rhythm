@@ -50,12 +50,13 @@ export class SequencerGridView {
     wrapper.style.display = 'flex';
     wrapper.style.flexDirection = 'column';
     wrapper.style.gap = '6px';
-    wrapper.style.padding = '12px';
+    wrapper.style.padding = '10px 12px 10px 0';
     wrapper.style.background = '#0f172a';
     wrapper.style.borderRadius = '8px';
     wrapper.style.border = '1px solid #1e293b';
     wrapper.style.overflowX = 'auto';
     wrapper.style.maxWidth = '100%';
+    wrapper.style.boxSizing = 'border-box';
 
     const stepTicks = PPQ / 4; // 24 ticks (16th note)
     const totalBars = pattern.bars;
@@ -68,14 +69,23 @@ export class SequencerGridView {
     headerRow.style.alignItems = 'center';
     headerRow.style.gap = '4px';
     headerRow.style.marginBottom = '2px';
+    headerRow.style.minWidth = 'max-content';
 
     const headerLabel = document.createElement('span');
-    headerLabel.style.width = '120px';
-    headerLabel.style.minWidth = '120px';
+    headerLabel.className = 'seq-header-label';
+    headerLabel.style.width = '132px';
+    headerLabel.style.minWidth = '132px';
+    headerLabel.style.paddingLeft = '12px';
+    headerLabel.style.boxSizing = 'border-box';
     headerLabel.style.fontSize = '10px';
     headerLabel.style.fontWeight = 'bold';
     headerLabel.style.color = '#64748b';
     headerLabel.style.textTransform = 'uppercase';
+    headerLabel.style.position = 'sticky';
+    headerLabel.style.left = '0';
+    headerLabel.style.background = '#0f172a';
+    headerLabel.style.zIndex = '10';
+    headerLabel.style.boxShadow = '4px 0 8px -2px rgba(0, 0, 0, 0.6)';
     headerLabel.textContent = 'Part / Step';
     headerRow.appendChild(headerLabel);
 
@@ -120,19 +130,27 @@ export class SequencerGridView {
       row.style.display = 'flex';
       row.style.alignItems = 'center';
       row.style.gap = '4px';
+      row.style.minWidth = 'max-content';
 
       // Track voice label
       const label = document.createElement('span');
       label.className = 'track-label';
       label.textContent = formatVoiceLabel(track.voice);
-      label.style.width = '120px';
-      label.style.minWidth = '120px';
+      label.style.width = '132px';
+      label.style.minWidth = '132px';
+      label.style.paddingLeft = '12px';
+      label.style.boxSizing = 'border-box';
       label.style.fontSize = '11px';
       label.style.fontWeight = '600';
       label.style.color = getVoiceColor(track.voice);
       label.style.textOverflow = 'ellipsis';
       label.style.overflow = 'hidden';
       label.style.whiteSpace = 'nowrap';
+      label.style.position = 'sticky';
+      label.style.left = '0';
+      label.style.background = '#0f172a';
+      label.style.zIndex = '10';
+      label.style.boxShadow = '4px 0 8px -2px rgba(0, 0, 0, 0.6)';
       row.appendChild(label);
 
       // Steps container

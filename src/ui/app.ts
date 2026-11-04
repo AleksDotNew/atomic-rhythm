@@ -213,6 +213,29 @@ export class App {
     // Populate routes list
     this.renderRoutes(root);
 
+    // Window resize handler for responsive SVG layout
+    window.addEventListener('resize', () => {
+      const svgBox = this.rootElement?.querySelector('#svg-container') as HTMLElement | null;
+      if (svgBox && this.currentMolecule) {
+        const w = svgBox.clientWidth > 100 ? svgBox.clientWidth : 520;
+        const h = svgBox.clientHeight > 100 ? svgBox.clientHeight : 340;
+        const computedOrder = computeOrderedSequence(
+          this.currentMolecule,
+          this.currentAnalysis,
+          this.orderStrategy,
+          this.customOrder
+        );
+        this.svgView.render(
+          this.currentMolecule,
+          this.currentAnalysis,
+          w,
+          h,
+          this.atomVoiceOverrides,
+          computedOrder
+        );
+      }
+    });
+
     // Render initial views
     this.updateAll();
   }
@@ -247,12 +270,16 @@ export class App {
     });
 
     // Render SVG with selection, badges and computed sequence order
+    const svgBox = this.rootElement?.querySelector('#svg-container') as HTMLElement | null;
+    const svgWidth = svgBox && svgBox.clientWidth > 100 ? svgBox.clientWidth : 520;
+    const svgHeight = svgBox && svgBox.clientHeight > 100 ? svgBox.clientHeight : 340;
+
     this.svgView.selectedAtomIndex = this.selectedAtomIndex;
     this.svgView.render(
       this.currentMolecule,
       this.currentAnalysis,
-      520,
-      340,
+      svgWidth,
+      svgHeight,
       this.atomVoiceOverrides,
       computedOrder
     );
