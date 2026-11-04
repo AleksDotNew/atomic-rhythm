@@ -14,6 +14,22 @@ describe('Exporters', () => {
     expect(code).toContain('s("bd');
   });
 
+  it('exports Strudel code with 1:1 soundbank alignment and .pan() modifier', () => {
+    const h2 = parseSmiles('[H][H]');
+    // Atom 0 on the left (-0.8), Atom 1 on the right (+0.8)
+    const pat = buildMoleculePattern(h2, {
+      mode: 'sequential',
+      atomsPerBar: 2,
+      atomPans: [-0.8, 0.8],
+    });
+    const code = exportToStrudel(pat);
+
+    // Expect soundbank tokens bd, hh, etc.
+    expect(code).toContain('s("');
+    // Expect .pan() modifier to be present
+    expect(code).toContain('.pan(');
+  });
+
   it('generates valid Standard MIDI File bytes (MThd, MTrk headers)', () => {
     const h2 = parseSmiles('[H][H]');
     const pat = buildMoleculePattern(h2);

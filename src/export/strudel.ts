@@ -4,6 +4,11 @@ export const DEFAULT_STRUDEL_VOICES: Record<string, string> = {
   proton: 'bd',
   neutron: 'hh',
   bond: 'cp',
+  kick: 'bd',
+  snare: 'sd',
+  hat: 'hh',
+  clap: 'cp',
+  rim: 'rim',
 };
 
 export function getStrudelToken(voice: string, customMap?: Record<string, string>): string {
@@ -41,6 +46,19 @@ export function exportToStrudel(
     if (track.cycleTicks !== barTicks) {
       const ratio = +(track.cycleTicks / barTicks).toFixed(3);
       trackExpr += `.slow(${ratio})`;
+    }
+
+    // Attach stereo panning if events have pan values (converted to Strudel 0..1 range)
+    const eventsWithPan = track.events.filter(e => e.pan !== undefined);
+    if (eventsWithPan.length > 0) {
+      const distinctPans = Array.from(new Set(eventsWithPan.map(e => e.pan!)));
+      if (distinctPans.length === 1) {
+        const strudelPan = +((distinctPans[0] + 1) / 2).toFixed(2);
+        trackExpr += `.pan(${strudelPan})`;
+      } else {
+        const panSteps = eventsWithPan.map(e => +((e.pan! + 1) / 2).toFixed(2));
+        trackExpr += `.pan("<${panSteps.join(' ')}>")`;
+      }
     }
 
     lines.push(`  ${trackExpr}`);
