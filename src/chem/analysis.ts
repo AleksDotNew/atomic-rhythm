@@ -81,6 +81,62 @@ function computeBondWeightsAndCounts(mol: Molecule): { counts: number[]; weights
   return { counts, weights };
 }
 
+export interface KeyNodalAtoms {
+  readonly bridgeheads: readonly number[];
+  readonly hubs: readonly number[];
+  readonly maxWeightAtoms: readonly number[];
+  readonly allNodalIndices: readonly number[];
+}
+
+export function findKeyNodalAtoms(mol: Molecule, analysis: MolecularAnalysis): KeyNodalAtoms {
+  const bridgeheads: number[] = [];
+  const hubs: number[] = [];
+  const maxWeightAtoms: number[] = [];
+
+  // 1. Detect bridgeheads (atoms belonging to >= 2 rings)
+  const ringMembership = new Map<number, number>();
+  for (const ring of analysis.rings) {
+    for (const aIdx of ring.atomIndices) {
+      ringMembership.set(aIdx, (ringMembership.get(aIdx) || 0) + 1);
+    }
+  }
+  for (const [aIdx, count] of ringMembership.entries()) {
+    if (count >= 2) {
+      bridgeheads.push(aIdx);
+    }
+  }
+
+  // 2. Detect central hubs with >= 4 bonds
+  for (let i = 0; i < mol.atoms.length; i++) {
+    if ((analysis.atomBondCounts[i] ?? 0) >= 4) {
+      hubs.push(i);
+    }
+  }
+
+  // 3. Detect max-weight atoms
+  if (analysis.atomBondWeights.length > 0) {
+    const maxWeight = Math.max(...analysis.atomBondWeights);
+    const allSame = analysis.atomBondWeights.every(w => Math.abs(w - maxWeight) < 1e-4);
+    if (!allSame && maxWeight >= 3.0) {
+      for (let i = 0; i < analysis.atomBondWeights.length; i++) {
+        if (Math.abs(analysis.atomBondWeights[i] - maxWeight) < 1e-4) {
+          maxWeightAtoms.push(i);
+        }
+      }
+    }
+  }
+
+  const allNodalSet = new Set<number>([...bridgeheads, ...hubs, ...maxWeightAtoms]);
+  const allNodalIndices = Array.from(allNodalSet).sort((a, b) => a - b);
+
+  return {
+    bridgeheads: bridgeheads.sort((a, b) => a - b),
+    hubs: hubs.sort((a, b) => a - b),
+    maxWeightAtoms: maxWeightAtoms.sort((a, b) => a - b),
+    allNodalIndices,
+  };
+}
+
 export function computeOrderedSequence(
   mol: Molecule,
   analysis: MolecularAnalysis,

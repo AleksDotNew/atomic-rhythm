@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseSmiles } from '../../src/chem/smiles';
 import { buildMoleculePattern } from '../../src/rhythm/molecule-pattern';
-import { exportToStrudel } from '../../src/export/strudel';
+import { exportToStrudel, getStrudelToken } from '../../src/export/strudel';
 import { exportToMidi } from '../../src/export/midi';
 
 describe('Exporters', () => {
@@ -28,6 +28,11 @@ describe('Exporters', () => {
     expect(code).toContain('s("');
     // Expect .pan() modifier to be present
     expect(code).toContain('.pan(');
+  });
+
+  it('maps crash to cr and openhat to oh in Strudel mini-notation', () => {
+    expect(getStrudelToken('crash')).toBe('cr');
+    expect(getStrudelToken('openhat')).toBe('oh');
   });
 
   it('generates valid Standard MIDI File bytes (MThd, MTrk headers)', () => {

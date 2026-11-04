@@ -1,4 +1,4 @@
-import { analyzeMolecule, computeOrderedSequence, OrderStrategy } from '../chem/analysis';
+import { analyzeMolecule, computeOrderedSequence, findKeyNodalAtoms, OrderStrategy } from '../chem/analysis';
 import { Molecule } from '../chem/molecule';
 import { SynthVoiceName } from '../audio/synth';
 import { buildAtomPattern } from './atom-pattern';
@@ -39,6 +39,7 @@ export function buildMoleculePattern(
   }
 
   const analysis = analyzeMolecule(mol);
+  const keyNodes = findKeyNodalAtoms(mol, analysis);
   const oneBarTicks = 16 * (PPQ / 4); // 384 ticks
 
   const trackMap = new Map<string, { cycleTicks: number; events: RhythmEvent[] }>();
@@ -78,10 +79,37 @@ export function buildMoleculePattern(
       const totalBars = Math.max(1, analysis.structuralUnits.length);
       const fullCycleTicks = totalBars * oneBarTicks;
 
+      // Downbeat crash accent at start of molecular cycle
+      addEvent('crash', fullCycleTicks, {
+        tick: 0,
+        velocity: 0.85,
+        durationTicks: 48,
+      });
+
       for (let unitIdx = 0; unitIdx < analysis.structuralUnits.length; unitIdx++) {
         const unit = analysis.structuralUnits[unitIdx];
         const barStartTick = unitIdx * oneBarTicks;
         const currentBar = unitIdx + 1;
+        const heavyIdx = unit.heavyAtomIndex;
+
+        // Accent nodal / weighted moments
+        if (keyNodes.bridgeheads.includes(heavyIdx)) {
+          if (barStartTick > 0) {
+            addEvent('crash', fullCycleTicks, {
+              tick: barStartTick,
+              velocity: 0.8,
+              durationTicks: 48,
+              atomIndex: heavyIdx,
+            });
+          }
+        } else if (keyNodes.hubs.includes(heavyIdx) || keyNodes.maxWeightAtoms.includes(heavyIdx)) {
+          addEvent('openhat', fullCycleTicks, {
+            tick: barStartTick,
+            velocity: 0.75,
+            durationTicks: 24,
+            atomIndex: heavyIdx,
+          });
+        }
 
         // 1. Peripheral atoms (Hydrogens) play first / groove throughout unit bar
         for (let p = 0; p < unit.peripheralAtomIndices.length; p++) {
@@ -105,7 +133,6 @@ export function buildMoleculePattern(
         }
 
         // 2. Central Heavy Atom plays its driving foundation
-        const heavyIdx = unit.heavyAtomIndex;
         const heavyAtom = mol.atoms[heavyIdx];
         const heavyBondCount = analysis.atomBondCounts[heavyIdx];
         const heavyBondWeight = analysis.atomBondWeights[heavyIdx];
@@ -168,6 +195,13 @@ export function buildMoleculePattern(
       const fullCycleTicks = totalBars * oneBarTicks;
       const segmentTicks = Math.round(oneBarTicks / atomsPerBar);
 
+      // Downbeat crash accent at start of molecular cycle
+      addEvent('crash', fullCycleTicks, {
+        tick: 0,
+        velocity: 0.85,
+        durationTicks: 48,
+      });
+
       for (let seqIdx = 0; seqIdx < sequence.length; seqIdx++) {
         const atomIdx = sequence[seqIdx];
         const atom = mol.atoms[atomIdx];
@@ -175,6 +209,25 @@ export function buildMoleculePattern(
         const bondWeight = analysis.atomBondWeights[atomIdx];
         const segmentStartTick = seqIdx * segmentTicks;
         const currentBar = Math.floor(segmentStartTick / oneBarTicks) + 1;
+
+        // Accent nodal / weighted moments
+        if (keyNodes.bridgeheads.includes(atomIdx)) {
+          if (segmentStartTick > 0) {
+            addEvent('crash', fullCycleTicks, {
+              tick: segmentStartTick,
+              velocity: 0.8,
+              durationTicks: 48,
+              atomIndex: atomIdx,
+            });
+          }
+        } else if (keyNodes.hubs.includes(atomIdx) || keyNodes.maxWeightAtoms.includes(atomIdx)) {
+          addEvent('openhat', fullCycleTicks, {
+            tick: segmentStartTick,
+            velocity: 0.75,
+            durationTicks: 24,
+            atomIndex: atomIdx,
+          });
+        }
 
         let atomTracks = buildAtomPattern(atom, matrix, atomIdx, segmentTicks, bondCount, bondWeight);
         atomTracks = applyExcitationToAtom(atom, atomTracks, temperature, currentBar);
@@ -237,6 +290,22 @@ export function buildMoleculePattern(
     // Overlay Mode: all atoms play concurrently on 1 bar
     const totalBars = 1;
     const fullCycleTicks = oneBarTicks;
+
+    // Downbeat crash accent
+    addEvent('crash', fullCycleTicks, {
+      tick: 0,
+      velocity: 0.85,
+      durationTicks: 48,
+    });
+
+    if (keyNodes.allNodalIndices.length > 0) {
+      addEvent('openhat', fullCycleTicks, {
+        tick: Math.round(fullCycleTicks / 2),
+        velocity: 0.75,
+        durationTicks: 24,
+        atomIndex: keyNodes.allNodalIndices[0],
+      });
+    }
 
     for (let atomIdx = 0; atomIdx < mol.atoms.length; atomIdx++) {
       const atom = mol.atoms[atomIdx];

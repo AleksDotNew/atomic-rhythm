@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseSmiles } from '../../src/chem/smiles';
-import { analyzeMolecule } from '../../src/chem/analysis';
+import { analyzeMolecule, findKeyNodalAtoms } from '../../src/chem/analysis';
 
 describe('analyzeMolecule', () => {
   it('detects 6-membered aromatic ring in benzene c1ccccc1', () => {
@@ -94,6 +94,24 @@ describe('analyzeMolecule', () => {
 
     // Bond weight priority: C (weight 6) and O (weight 3) come before H (weight 1.5)
     expect(analysis.atomBondWeights[0]).toBeGreaterThan(analysis.atomBondWeights[3]); // C vs H
+  });
+
+  it('detects key nodal atoms: bridgeheads in bicyclic systems and hubs in branched molecules', () => {
+    // Neopentane CC(C)(C)C: atom 1 is the central quaternary carbon (4 C-C bonds)
+    const neopentane = parseSmiles('CC(C)(C)C');
+    const neoAnalysis = analyzeMolecule(neopentane);
+    const neoNodes = findKeyNodalAtoms(neopentane, neoAnalysis);
+
+    expect(neoNodes.hubs).toContain(1);
+    expect(neoNodes.allNodalIndices).toContain(1);
+
+    // Bicyclic molecule C1CC2CCC1C2 (bicyclo[2.2.1]heptane-like): two bridgehead atoms
+    const bicyclo = parseSmiles('C1CC2CCC1C2');
+    const biAnalysis = analyzeMolecule(bicyclo);
+    const biNodes = findKeyNodalAtoms(bicyclo, biAnalysis);
+
+    expect(biNodes.bridgeheads.length).toBeGreaterThanOrEqual(2);
+    expect(biNodes.allNodalIndices.length).toBeGreaterThanOrEqual(2);
   });
 });
 

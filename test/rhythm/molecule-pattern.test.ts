@@ -129,6 +129,22 @@ describe('buildMoleculePattern', () => {
     expect(ev0!.pan).toBeCloseTo(-0.85 * 0.25, 2);
     expect(ev1!.pan).toBeCloseTo(0.85 * 0.25, 2);
   });
+
+  it('triggers downbeat crash on cycle start (tick 0) and openhat on central hub nodes', () => {
+    // Neopentane CC(C)(C)C has central hub atom 1
+    const neopentane = parseSmiles('CC(C)(C)C');
+    const pat = buildMoleculePattern(neopentane, { mode: 'sequential' });
+
+    const crashTrack = pat.tracks.find(t => t.voice === 'crash');
+    expect(crashTrack).toBeDefined();
+    // Cycle starts with downbeat crash at tick 0
+    expect(crashTrack!.events.some(e => e.tick === 0)).toBe(true);
+
+    const openHatTrack = pat.tracks.find(t => t.voice === 'openhat');
+    expect(openHatTrack).toBeDefined();
+    // Central hub atom 1 has openhat accent
+    expect(openHatTrack!.events.some(e => e.atomIndex === 1)).toBe(true);
+  });
 });
 
 

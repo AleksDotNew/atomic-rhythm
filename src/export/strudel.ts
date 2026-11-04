@@ -7,6 +7,8 @@ export const DEFAULT_STRUDEL_VOICES: Record<string, string> = {
   kick: 'bd',
   snare: 'sd',
   hat: 'hh',
+  openhat: 'oh',
+  crash: 'cr',
   clap: 'cp',
   rim: 'rim',
 };
