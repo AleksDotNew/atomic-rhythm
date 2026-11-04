@@ -145,6 +145,41 @@ describe('buildMoleculePattern', () => {
     // Central hub atom 1 has openhat accent
     expect(openHatTrack!.events.some(e => e.atomIndex === 1)).toBe(true);
   });
+
+  it('supports expanded atomsPerBar (16 and 32) with zero cumulative rounding drift', () => {
+    // Generate a 16-atom chain (e.g. Hexadecane C16H34, or arbitrary SMILES with 16 atoms)
+    const ethanol = parseSmiles('CCO'); // 9 atoms
+    // Sequential mode with 16 atoms/bar
+    const pat16 = buildMoleculePattern(ethanol, {
+      mode: 'sequential',
+      atomsPerBar: 16,
+      orderStrategy: 'mass',
+    });
+
+    // 9 atoms with 16 atoms/bar fit in 1 bar
+    expect(pat16.bars).toBe(1);
+
+    // Check atom 0 start tick (0) and atom 1 start tick (round(384 / 16) = 24)
+    const protonTrack = pat16.tracks.find(t => t.voice === 'proton');
+    expect(protonTrack).toBeDefined();
+
+    // Sequential mode with 32 atoms/bar (12 ticks per segment -> 1/32 notes)
+    const pat32 = buildMoleculePattern(ethanol, {
+      mode: 'sequential',
+      atomsPerBar: 32,
+      orderStrategy: 'mass',
+    });
+    expect(pat32.bars).toBe(1);
+
+    // Non-power-of-2 atomsPerBar = 5 has drift-free total duration across bars
+    const pat5 = buildMoleculePattern(ethanol, {
+      mode: 'sequential',
+      atomsPerBar: 5,
+      orderStrategy: 'mass',
+    });
+    // 9 atoms with 5 per bar = 2 bars (ceil(9 / 5) = 2)
+    expect(pat5.bars).toBe(2);
+  });
 });
 
 

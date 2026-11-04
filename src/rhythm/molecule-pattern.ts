@@ -191,9 +191,9 @@ export function buildMoleculePattern(
     } else {
       // Ordered sequence mode (custom, bondWeight, mass, or fallback for all-H)
       const sequence = computeOrderedSequence(mol, analysis, orderStrategy, customOrder);
-      const totalBars = Math.max(1, Math.ceil(sequence.length / atomsPerBar));
+      const apb = Math.max(1, atomsPerBar);
+      const totalBars = Math.max(1, Math.ceil(sequence.length / apb));
       const fullCycleTicks = totalBars * oneBarTicks;
-      const segmentTicks = Math.round(oneBarTicks / atomsPerBar);
 
       // Downbeat crash accent at start of molecular cycle
       addEvent('crash', fullCycleTicks, {
@@ -207,7 +207,9 @@ export function buildMoleculePattern(
         const atom = mol.atoms[atomIdx];
         const bondCount = analysis.atomBondCounts[atomIdx];
         const bondWeight = analysis.atomBondWeights[atomIdx];
-        const segmentStartTick = seqIdx * segmentTicks;
+        const segmentStartTick = Math.round((seqIdx * oneBarTicks) / apb);
+        const nextSegmentStartTick = Math.round(((seqIdx + 1) * oneBarTicks) / apb);
+        const segmentTicks = Math.max(1, nextSegmentStartTick - segmentStartTick);
         const currentBar = Math.floor(segmentStartTick / oneBarTicks) + 1;
 
         // Accent nodal / weighted moments
@@ -248,7 +250,7 @@ export function buildMoleculePattern(
           );
 
           if (bond) {
-            const boundaryTick = (segmentStartTick + segmentTicks) % fullCycleTicks;
+            const boundaryTick = nextSegmentStartTick % fullCycleTicks;
             let articulation: RhythmEvent['articulation'] = 'normal';
             let velocity = 0.8;
 
