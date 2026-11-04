@@ -117,5 +117,38 @@ describe('App interactive UI and Modulation Matrix', () => {
     expect(phaseBadge?.textContent).toContain('Plasma');
     expect(bpmVal?.textContent).toContain('360 bpm');
   });
+
+  // @vitest-environment happy-dom
+  it('renders soundbank selector with procedural, strudel CDN, and local options, and crash/openhat in inspector', () => {
+    const root = document.createElement('div');
+    const app = new App();
+    app.mount(root);
+
+    // Soundbank selector
+    const bankSelect = root.querySelector('#select-soundbank') as HTMLSelectElement | null;
+    expect(bankSelect).toBeTruthy();
+    expect(bankSelect?.value).toBe('procedural');
+
+    const options = Array.from(bankSelect?.querySelectorAll('option') || []).map(o => o.value);
+    expect(options).toContain('procedural');
+    expect(options).toContain('strudel-dirt');
+    expect(options).toContain('local');
+
+    // Status badge
+    const statusBadge = root.querySelector('#soundbank-status');
+    expect(statusBadge?.textContent).toContain('Synth');
+
+    // File input
+    const fileInput = root.querySelector('#input-sample-files') as HTMLInputElement | null;
+    expect(fileInput).toBeTruthy();
+    expect(fileInput?.type).toBe('file');
+
+    // Atom Inspector voice select options include crash and openhat
+    const voiceSelect = root.querySelector('#select-atom-voice') as HTMLSelectElement | null;
+    expect(voiceSelect).toBeTruthy();
+    const voiceOptions = Array.from(voiceSelect?.querySelectorAll('option') || []).map(o => o.value);
+    expect(voiceOptions).toContain('crash');
+    expect(voiceOptions).toContain('openhat');
+  });
 });
 

@@ -24,6 +24,8 @@
   - `kick` / `proton`: `bd`
   - `snare` / `electron`: `sd`
   - `hat` / `neutron`: `hh`
+  - `openhat`: `oh`
+  - `crash`: `cr`
   - `clap` / `bond`: `cp`
   - `rim` / `motif`: `rim`
 - All existing Vitest test suites must continue passing.
@@ -317,3 +319,110 @@ Check that panning and temperature ranges operate smoothly across all presets.
 - [x] **Step 4: Final commit and summary**
 
 Commit any final updates.
+
+---
+
+### Task 8: Procedural Synthesis for `crash` and `openhat`
+
+**Files:**
+- Modify: `src/audio/synth.ts`
+- Test: `test/audio/audio.test.ts`
+
+**Interfaces:**
+- `SynthVoiceName`: `'kick' | 'snare' | 'hat' | 'clap' | 'rim' | 'openhat' | 'crash'`
+- Procedural `playOpenHat`: long decaying bandpass noise (~0.4s) with hi-hat choke tracking.
+- Procedural `playCrash`: inharmonic metallic multi-sine bank (400, 580, 830, 1150, 1600, 2300 Hz) + noise burst with ~1.5s shimmering decay.
+
+- [x] **Step 1: Write unit tests for `crash` and `openhat` synthesis**
+- [x] **Step 2: Run test to confirm failure**
+- [x] **Step 3: Implement `playOpenHat` and `playCrash` in `src/audio/synth.ts`**
+- [x] **Step 4: Run tests and verify they pass**
+- [x] **Step 5: Commit changes**
+
+---
+
+### Task 9: Sample Bank Engine (Strudel Dirt CDN & Local Files)
+
+**Files:**
+- Create: `src/audio/samples.ts`
+- Modify: `src/audio/synth.ts`
+- Test: `test/audio/samples.test.ts`
+
+**Interfaces:**
+- Produces:
+  ```ts
+  export interface SampleBank {
+    name: string;
+    loadFromUrl(baseUrl: string): Promise<void>;
+    loadLocalFiles(files: FileList | File[]): Promise<void>;
+    getBuffer(voice: SynthVoiceName): AudioBuffer | null;
+    hasVoice(voice: SynthVoiceName): boolean;
+    clear(): void;
+  }
+  export function createSampleBank(ctx: AudioContext): SampleBank;
+  ```
+- `DrumSynth.setSampleBank(bank: SampleBank | null): void`:
+  When a sample is available for a voice, triggers via `AudioBufferSourceNode`; otherwise falls back seamlessly to procedural synth.
+
+- [x] **Step 1: Write unit tests for `SampleBank`**
+- [x] **Step 2: Run test to confirm failure**
+- [x] **Step 3: Implement `src/audio/samples.ts` and integrate with `createDrumSynth`**
+- [x] **Step 4: Run tests and verify they pass**
+- [x] **Step 5: Commit changes**
+
+---
+
+### Task 10: Chemical Node Detection & Automatic Accent Mapping
+
+**Files:**
+- Modify: `src/chem/analysis.ts`
+- Modify: `src/rhythm/molecule-pattern.ts`
+- Modify: `src/export/strudel.ts`
+- Test: `test/rhythm/molecule-pattern.test.ts`
+- Test: `test/export/export.test.ts`
+
+**Interfaces:**
+- In `analysis.ts`:
+  `findKeyNodalAtoms(mol: Molecule, analysis: MolecularAnalysis): number[]`
+  Detects bridgehead atoms (atoms shared between multiple rings) and atoms with maximal bond weight.
+- In `molecule-pattern.ts`:
+  - Triggers `crash` on bar 1, tick 0 (molecular downbeat).
+  - Triggers `openhat` or `crash` on key nodal atoms.
+- In `strudel.ts`:
+  Maps `crash` -> `cr` and `openhat` -> `oh`.
+
+- [x] **Step 1: Write unit tests for nodal atom detection and accent generation**
+- [x] **Step 2: Run test to confirm failure**
+- [x] **Step 3: Implement nodal detection and pattern accents**
+- [x] **Step 4: Run tests and verify they pass**
+- [x] **Step 5: Commit changes**
+
+---
+
+### Task 11: UI Controls for Soundbank Selector, Local Files & Atom Voices
+
+**Files:**
+- Modify: `src/ui/app.ts`
+- Modify: `src/style.css`
+- Test: `test/ui/app.test.ts`
+
+**Interfaces:**
+- Top transport bar:
+  - Soundbank selector: `Bank: [Procedural 808 | Strudel Dirt (GitHub CDN) | Local Audio Files...]`
+  - Hidden `<input type="file" id="input-sample-files" multiple accept="audio/*">` triggered on selecting "Local Audio Files...".
+- Atom Inspector:
+  - Adds `Crash Cymbal (Крэш)` and `Open Hi-Hat (Открытый хэт)` to voice override dropdown.
+
+- [x] **Step 1: Write UI tests for soundbank selector and voice options**
+- [x] **Step 2: Run test to confirm failure**
+- [x] **Step 3: Implement soundbank UI and inspector dropdown options**
+- [x] **Step 4: Run tests and verify they pass**
+- [x] **Step 5: Commit changes**
+
+---
+
+### Task 12: Full System Verification & Production Build
+
+- [x] **Step 1: Run complete test suite (`npm test`)**
+- [x] **Step 2: Run production build (`npm run build`)**
+- [x] **Step 3: Final verification and push to origin main**

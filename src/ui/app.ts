@@ -4,6 +4,7 @@ import { MoleculePreset, PRESETS } from '../chem/presets';
 import { parseSmiles } from '../chem/smiles';
 import { AudioScheduler } from '../audio/scheduler';
 import { createDrumSynth, DrumSynth, SynthVoiceName } from '../audio/synth';
+import { createSampleBank, SampleBank } from '../audio/samples';
 import { exportToMidi } from '../export/midi';
 import { exportToStrudel } from '../export/strudel';
 import { isAtomExcited } from '../rhythm/excitation';
@@ -47,6 +48,7 @@ export class App {
   private audioCtx: AudioContext | null = null;
   private drumSynth: DrumSynth | null = null;
   private scheduler: AudioScheduler | null = null;
+  private activeSampleBank: SampleBank | null = null;
 
   private svgView!: MoleculeSvgView;
   private seqView!: SequencerGridView;
@@ -124,6 +126,17 @@ export class App {
           <div class="control-group">
             <label for="input-apb">Atoms/Bar</label>
             <input type="number" id="input-apb" value="2" min="1" max="8" style="width: 50px;" />
+          </div>
+
+          <div class="control-group">
+            <label for="select-soundbank">Bank</label>
+            <select id="select-soundbank">
+              <option value="procedural">Procedural Synth</option>
+              <option value="strudel-dirt">Strudel Dirt (CDN)</option>
+              <option value="local">Load Audio Files...</option>
+            </select>
+            <span id="soundbank-status" class="bank-badge bank-badge-synth" title="Active audio soundbank">Synth</span>
+            <input type="file" id="input-sample-files" multiple accept="audio/*" style="display: none;" />
           </div>
         </div>
       </header>
@@ -259,6 +272,9 @@ export class App {
       const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.audioCtx = new AudioCtxClass();
       this.drumSynth = createDrumSynth(this.audioCtx);
+      if (this.activeSampleBank) {
+        this.drumSynth.setSampleBank(this.activeSampleBank);
+      }
       this.scheduler = new AudioScheduler(this.audioCtx, this.drumSynth);
     }
   }
@@ -399,6 +415,8 @@ export class App {
           <option value="kick" ${currentVoice === 'kick' ? 'selected' : ''}>Kick Drum (Бочка)</option>
           <option value="snare" ${currentVoice === 'snare' ? 'selected' : ''}>Snare Drum (Малый)</option>
           <option value="hat" ${currentVoice === 'hat' ? 'selected' : ''}>Closed Hi-Hat (Хэт)</option>
+          <option value="openhat" ${currentVoice === 'openhat' ? 'selected' : ''}>Open Hi-Hat (Открытый хэт)</option>
+          <option value="crash" ${currentVoice === 'crash' ? 'selected' : ''}>Crash Cymbal (Крэш)</option>
           <option value="clap" ${currentVoice === 'clap' ? 'selected' : ''}>Hand Clap (Хлопок)</option>
           <option value="rim" ${currentVoice === 'rim' ? 'selected' : ''}>Rimshot (Римшот)</option>
           <option value="mute" ${currentVoice === 'mute' ? 'selected' : ''}>Mute (Заглушить)</option>
@@ -504,6 +522,82 @@ export class App {
     const smilesError = root.querySelector('#smiles-error') as HTMLElement;
     const btnExportStrudel = root.querySelector('#btn-export-strudel') as HTMLButtonElement;
     const btnExportMidi = root.querySelector('#btn-export-midi') as HTMLButtonElement;
+
+    // Soundbank controls
+    const selectSoundbank = root.querySelector('#select-soundbank') as HTMLSelectElement | null;
+    const soundbankStatus = root.querySelector('#soundbank-status') as HTMLElement | null;
+    const inputSampleFiles = root.querySelector('#input-sample-files') as HTMLInputElement | null;
+
+    selectSoundbank?.addEventListener('change', async () => {
+      const mode = selectSoundbank.value;
+      this.initAudio();
+
+      if (mode === 'procedural') {
+        this.drumSynth?.setSampleBank(null);
+        if (soundbankStatus) {
+          soundbankStatus.textContent = 'Synth';
+          soundbankStatus.className = 'bank-badge bank-badge-synth';
+        }
+      } else if (mode === 'strudel-dirt') {
+        if (!this.audioCtx) return;
+        if (soundbankStatus) {
+          soundbankStatus.textContent = 'Loading...';
+          soundbankStatus.className = 'bank-badge bank-badge-loading';
+        }
+        try {
+          const bank = createSampleBank(this.audioCtx, 'Strudel Dirt');
+          const result = await bank.loadFromUrl();
+          this.activeSampleBank = bank;
+          this.drumSynth?.setSampleBank(bank);
+          if (soundbankStatus) {
+            soundbankStatus.textContent = `Strudel (${result.loaded}/7)`;
+            soundbankStatus.className = 'bank-badge bank-badge-loaded';
+          }
+        } catch {
+          if (soundbankStatus) {
+            soundbankStatus.textContent = 'Load Failed';
+            soundbankStatus.className = 'bank-badge bank-badge-error';
+          }
+        }
+      } else if (mode === 'local') {
+        inputSampleFiles?.click();
+      }
+    });
+
+    inputSampleFiles?.addEventListener('change', async () => {
+      const files = inputSampleFiles.files;
+      if (files && files.length > 0) {
+        this.initAudio();
+        if (!this.audioCtx) return;
+        if (soundbankStatus) {
+          soundbankStatus.textContent = 'Decoding...';
+          soundbankStatus.className = 'bank-badge bank-badge-loading';
+        }
+        try {
+          const bank = createSampleBank(this.audioCtx, 'Local Samples');
+          const count = await bank.loadLocalFiles(files);
+          this.activeSampleBank = bank;
+          this.drumSynth?.setSampleBank(bank);
+          if (soundbankStatus) {
+            soundbankStatus.textContent = `Local (${count})`;
+            soundbankStatus.className = 'bank-badge bank-badge-loaded';
+          }
+        } catch {
+          if (soundbankStatus) {
+            soundbankStatus.textContent = 'Error';
+            soundbankStatus.className = 'bank-badge bank-badge-error';
+          }
+        }
+      } else {
+        if (selectSoundbank) {
+          selectSoundbank.value = this.activeSampleBank
+            ? this.activeSampleBank.name === 'Strudel Dirt'
+              ? 'strudel-dirt'
+              : 'local'
+            : 'procedural';
+        }
+      }
+    });
 
     // Interactive Modulation Matrix header buttons
     const btnAddRoute = root.querySelector('#btn-add-route') as HTMLButtonElement | null;
