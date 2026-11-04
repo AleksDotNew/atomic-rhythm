@@ -20,7 +20,13 @@
 - At $-273.15^\circ\text{C}$: BPM = 1. At $0^\circ\text{C}$: BPM = 120. At $+5000^\circ\text{C}$: BPM = 360.
 - Phase states: Solid ($T < -10^\circ\text{C}$), Liquid ($-10^\circ\text{C} \le T < +150^\circ\text{C}$), Gas ($+150^\circ\text{C} \le T < +2500^\circ\text{C}$), Plasma ($T \ge +2500^\circ\text{C}$).
 - Pan range: $[-0.85, +0.85]$. Kick voice centered with scale factor $\times 0.25$.
-- All existing 16 Vitest test suites (60 tests) must continue passing.
+- Default soundbank is 1:1 aligned with Strudel standard drum samples:
+  - `kick` / `proton`: `bd`
+  - `snare` / `electron`: `sd`
+  - `hat` / `neutron`: `hh`
+  - `clap` / `bond`: `cp`
+  - `rim` / `motif`: `rim`
+- All existing Vitest test suites must continue passing.
 
 ---
 
@@ -42,7 +48,7 @@
   export function formatTemperature(temperature: number): string;
   ```
 
-- [ ] **Step 1: Write the failing unit tests for temperature calculation**
+- [x] **Step 1: Write the failing unit tests for temperature calculation**
 
 Create `test/rhythm/temperature.test.ts` testing:
 - BPM at absolute zero ($-273.15^\circ\text{C}$) is 1
@@ -52,11 +58,11 @@ Create `test/rhythm/temperature.test.ts` testing:
 - Phase state transitions: $-200^\circ\text{C}$ -> solid, $20^\circ\text{C}$ -> liquid, $500^\circ\text{C}$ -> gas, $3500^\circ\text{C}$ -> plasma
 - Slider conversions round-trip correctly for $0$, $-273.15$, $100$, $5000$.
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
 
 Run `npm test test/rhythm/temperature.test.ts` and verify it fails (module not found).
 
-- [ ] **Step 3: Implement `src/rhythm/temperature.ts`**
+- [x] **Step 3: Implement `src/rhythm/temperature.ts`**
 
 Implement formulas:
 - Sub-zero: $K = T + 273.15$, $\text{BPM} = \max(1, \operatorname{round}(1 + (baseBpm - 1) \cdot (K / 273.15)^{0.65}))$
@@ -65,11 +71,11 @@ Implement formulas:
 - Slider mappings: $u < 0 \implies T = u \cdot 273.15$; $u \ge 0 \implies T = 5000 \cdot u^3$
 - Re-export `calculateBpm` in `excitation.ts` for backward compatibility.
 
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 4: Run tests and verify they pass**
 
 Run `npm test` and ensure all tests pass.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 Commit with message `feat(chem): thermodynamic non-linear temperature and phase transition engine`.
 
@@ -89,7 +95,7 @@ Commit with message `feat(chem): thermodynamic non-linear temperature and phase 
   export function formatPanLabel(pan: number): string; // e.g. "L 42%", "Center", "R 60%"
   ```
 
-- [ ] **Step 1: Write the failing unit tests for panning**
+- [x] **Step 1: Write the failing unit tests for panning**
 
 Create `test/rhythm/panning.test.ts` testing:
 - Monatomic molecule (1 atom or all coords equal) returns `pan = 0.0`
@@ -98,19 +104,19 @@ Create `test/rhythm/panning.test.ts` testing:
 - `adjustPanForVoice` with voice `'kick'` scales pan by $0.25$
 - `formatPanLabel`: negative -> `L X%`, near zero -> `Center`, positive -> `R X%`
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
 
 Run `npm test test/rhythm/panning.test.ts` and confirm failure.
 
-- [ ] **Step 3: Implement `src/rhythm/panning.ts`**
+- [x] **Step 3: Implement `src/rhythm/panning.ts`**
 
 Implement `computeAtomPans`, `adjustPanForVoice`, and `formatPanLabel`.
 
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 4: Run tests and verify they pass**
 
 Run `npm test` and confirm all tests pass.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 Commit with message `feat(audio): 2D molecular spatial stereo panning engine`.
 
@@ -143,23 +149,23 @@ Commit with message `feat(audio): 2D molecular spatial stereo panning engine`.
   }
   ```
 
-- [ ] **Step 1: Write test for pattern pan assignment**
+- [x] **Step 1: Write test for pattern pan assignment**
 
 Add test in `test/rhythm/molecule-pattern.test.ts` ensuring events receive `pan` according to `atomPans` and voice type.
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
 
 Run `npm test test/rhythm/molecule-pattern.test.ts`.
 
-- [ ] **Step 3: Implement `pan` field in `ir.ts` and populate in `buildMoleculePattern`**
+- [x] **Step 3: Implement `pan` field in `ir.ts` and populate in `buildMoleculePattern`**
 
 Pass `atomPans` when generating atom and bond tracks.
 
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 4: Run tests and verify they pass**
 
 Run `npm test` and verify full suite passes.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 Commit with message `feat(rhythm): attach spatial panning to rhythm events in pattern generator`.
 
@@ -181,15 +187,15 @@ Commit with message `feat(rhythm): attach spatial panning to rhythm events in pa
   ```
 - Scheduler extracts `evt.pan` and forwards it to `drumSynth.trigger`.
 
-- [ ] **Step 1: Write tests for synth and scheduler pan handling**
+- [x] **Step 1: Write tests for synth and scheduler pan handling**
 
 Add test cases in `test/audio/audio.test.ts` checking `trigger` accepts pan parameter and creates/connects `StereoPannerNode` if available.
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
 
 Run `npm test test/audio/audio.test.ts`.
 
-- [ ] **Step 3: Implement `StereoPannerNode` in `synth.ts` and `scheduler.ts`**
+- [x] **Step 3: Implement `StereoPannerNode` in `synth.ts` and `scheduler.ts`**
 
 In each voice synthesizer:
 - If `ctx.createStereoPanner` is available, create `pannerNode = ctx.createStereoPanner()`
@@ -198,11 +204,11 @@ In each voice synthesizer:
 In `AudioScheduler.scheduleEvent`:
 - Pass `evt.pan` to `this.synth.trigger(voice, noteTime, vel, evt.articulation, evt.pan)`.
 
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 4: Run tests and verify they pass**
 
 Run `npm test` to verify audio suite.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 Commit with message `feat(audio): Web Audio StereoPannerNode integration in DrumSynth and Scheduler`.
 
@@ -218,23 +224,23 @@ Commit with message `feat(audio): Web Audio StereoPannerNode integration in Drum
 - `exportToStrudel(pattern: Pattern): string`
   Emits `.pan(...)` on tracks when events contain non-zero pan.
 
-- [ ] **Step 1: Write test for Strudel export with pan**
+- [x] **Step 1: Write test for Strudel export with pan**
 
 Test that exported Strudel code contains `.pan(...)` modifier when events have stereo panning.
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
 
 Run `npm test test/export/export.test.ts`.
 
-- [ ] **Step 3: Implement pan export in `strudel.ts`**
+- [x] **Step 3: Implement pan export in `strudel.ts`**
 
 Average track pan or per-cycle pan emitted cleanly in Strudel notation.
 
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 4: Run tests and verify they pass**
 
 Run `npm test` and verify export tests pass.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 Commit with message `feat(export): include stereo panning modifiers in Strudel code generator`.
 
@@ -257,29 +263,29 @@ Commit with message `feat(export): include stereo panning modifiers in Strudel c
 - Atom Inspector:
   - Displays computed spatial pan `Pan: L 34%` / `Pan: Center` / `Pan: R 50%`
 
-- [ ] **Step 1: Write UI tests for non-linear slider and phase badge**
+- [x] **Step 1: Write UI tests for non-linear slider and phase badge**
 
 Add tests in `test/ui/app.test.ts` verifying:
 - Slider moves change temperature non-linearly
 - Phase badge updates to `Solid`, `Liquid`, `Gas`, `Plasma`
 - Atom Inspector shows spatial pan info for selected atom
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
 
 Run `npm test test/ui/app.test.ts`.
 
-- [ ] **Step 3: Implement UI updates in `app.ts` and `style.css`**
+- [x] **Step 3: Implement UI updates in `app.ts` and `style.css`**
 
 - Connect slider events via `sliderToTemperature`
 - Update `#phase-badge` content and CSS class
 - Update Atom Inspector to show `Pan: ...`
 - Feed computed `atomPans` into `buildMoleculePattern`
 
-- [ ] **Step 4: Run tests and verify they pass**
+- [x] **Step 4: Run tests and verify they pass**
 
 Run `npm test` and verify all tests pass.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 Commit with message `feat(ui): non-linear temperature slider with phase transition badge and atom pan inspector`.
 
@@ -291,15 +297,15 @@ Commit with message `feat(ui): non-linear temperature slider with phase transiti
 - All touched files
 - Production build: `dist/index.html`
 
-- [ ] **Step 1: Run complete test suite**
+- [x] **Step 1: Run complete test suite**
 
 Execute `npm test` and verify 100% pass across all test files.
 
-- [ ] **Step 2: Run production build**
+- [x] **Step 2: Run production build**
 
 Execute `npm run build` and ensure bundle compiles without warnings or errors.
 
-- [ ] **Step 3: Verification of edge cases**
+- [x] **Step 3: Verification of edge cases**
 
 Test molecules:
 - Monatomic: `[P]` (Phosphorus), `[Fe]` (Iron)
@@ -308,6 +314,6 @@ Test molecules:
 - Complex: `CN1C=NC2=C1C(=O)N(C(=O)N2C)C` (Caffeine)
 Check that panning and temperature ranges operate smoothly across all presets.
 
-- [ ] **Step 4: Final commit and summary**
+- [x] **Step 4: Final commit and summary**
 
 Commit any final updates.
