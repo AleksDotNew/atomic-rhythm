@@ -105,6 +105,30 @@ describe('buildMoleculePattern', () => {
     // C has bond weight 6.0, H has bond weight 1.5 -> C velocity is higher
     expect(cKick!.velocity).toBeGreaterThan(hKick!.velocity);
   });
+
+  it('assigns 2D spatial stereo panning to events when atomPans are provided', () => {
+    const h2 = parseSmiles('[H][H]');
+    // Atom 0 on the left (-0.85), Atom 1 on the right (+0.85)
+    const atomPans = [-0.85, 0.85];
+    const pat = buildMoleculePattern(h2, {
+      mode: 'sequential',
+      atomsPerBar: 2,
+      atomPans,
+    });
+
+    const protonTrack = pat.tracks.find(t => t.voice === 'proton');
+    expect(protonTrack).toBeDefined();
+
+    const ev0 = protonTrack!.events.find(e => e.atomIndex === 0);
+    const ev1 = protonTrack!.events.find(e => e.atomIndex === 1);
+
+    expect(ev0).toBeDefined();
+    expect(ev1).toBeDefined();
+
+    // Proton defaults to kick-like instrument, so pan is scaled by kick anchor (0.25)
+    expect(ev0!.pan).toBeCloseTo(-0.85 * 0.25, 2);
+    expect(ev1!.pan).toBeCloseTo(0.85 * 0.25, 2);
+  });
 });
 
 

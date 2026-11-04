@@ -6,6 +6,7 @@ import { applyExcitationToAtom } from './excitation';
 import { createPattern, Pattern, PPQ, RhythmEvent, Track } from './ir';
 import { DEFAULT_MOD_MATRIX, ModulationMatrix } from './modmatrix';
 import { buildMotifTracks } from './motifs';
+import { adjustPanForVoice } from './panning';
 
 export type PlaybackMode = 'sequential' | 'overlay';
 export type FormMode = 'direct' | 'assembly';
@@ -18,6 +19,7 @@ export interface MoleculePatternOptions {
   readonly atomVoiceOverrides?: Record<number, SynthVoiceName | 'default' | 'mute'>;
   readonly orderStrategy?: OrderStrategy;
   readonly customOrder?: readonly number[];
+  readonly atomPans?: readonly number[];
 }
 
 export function buildMoleculePattern(
@@ -54,11 +56,18 @@ export function buildMoleculePattern(
     const effectiveVoice = getEffectiveVoice(event.atomIndex, voice);
     if (!effectiveVoice) return; // Muted
 
+    let pan = event.pan;
+    if (pan === undefined && event.atomIndex !== undefined && options.atomPans && options.atomPans[event.atomIndex] !== undefined) {
+      pan = adjustPanForVoice(options.atomPans[event.atomIndex], effectiveVoice);
+    }
+
+    const finalEvent: RhythmEvent = pan !== undefined ? { ...event, pan } : event;
+
     if (!trackMap.has(effectiveVoice)) {
       trackMap.set(effectiveVoice, { cycleTicks, events: [] });
     }
     const t = trackMap.get(effectiveVoice)!;
-    t.events.push(event);
+    t.events.push(finalEvent);
   };
 
   const hasHeavyAtoms = mol.atoms.some(a => a.element.symbol !== 'H');

@@ -8,6 +8,7 @@ export interface RhythmEvent {
   readonly durationTicks: number;
   readonly articulation: Articulation;
   readonly atomIndex?: number;
+  readonly pan?: number; // stereo pan -1.0 (Full L) .. +1.0 (Full R)
 }
 
 export interface Track {
