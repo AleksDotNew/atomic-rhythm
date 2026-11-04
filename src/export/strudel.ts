@@ -1,3 +1,4 @@
+import { generateEuclidean } from '../rhythm/euclid';
 import { Pattern, PPQ, Track } from '../rhythm/ir';
 
 export const DEFAULT_STRUDEL_VOICES: Record<string, string> = {
@@ -13,6 +14,12 @@ export const DEFAULT_STRUDEL_VOICES: Record<string, string> = {
   rim: 'rim',
 };
 
+export interface StrudelExportOptions {
+  readonly voiceMap?: Record<string, string>;
+  readonly samplesDeclaration?: string;
+  readonly compact?: boolean;
+}
+
 export function getStrudelToken(voice: string, customMap?: Record<string, string>): string {
   if (customMap && customMap[voice]) return customMap[voice];
   if (DEFAULT_STRUDEL_VOICES[voice]) return DEFAULT_STRUDEL_VOICES[voice];
@@ -21,10 +28,66 @@ export function getStrudelToken(voice: string, customMap?: Record<string, string
   return 'perc';
 }
 
+function runLengthCompress(steps: string[]): string {
+  const parts: string[] = [];
+  let i = 0;
+  while (i < steps.length) {
+    const cur = steps[i];
+    let count = 1;
+    while (i + count < steps.length && steps[i + count] === cur) {
+      count++;
+    }
+    if (count > 1) {
+      parts.push(`${cur}!${count}`);
+    } else {
+      parts.push(cur);
+    }
+    i += count;
+  }
+  return parts.join(' ');
+}
+
+function compactMiniNotation(stepGrid: string[], token: string): string {
+  const n = stepGrid.length;
+  if (n === 0) return '~';
+
+  const nonTilde = stepGrid.filter(s => s !== '~');
+  if (nonTilde.length === 0) return `~!${n}`;
+
+  // Check if all non-tilde steps match `token`
+  const isPureSingleVoice = nonTilde.every(s => s === token);
+  const k = nonTilde.length;
+
+  if (isPureSingleVoice && k > 1 && k < n) {
+    const euclid = generateEuclidean(k, n, 0);
+    const matchesEuclid = euclid.pattern.every((hit, idx) => hit === (stepGrid[idx] === token));
+    if (matchesEuclid) {
+      return `${token}(${k},${n})`;
+    }
+  }
+
+  return runLengthCompress(stepGrid);
+}
+
 export function exportToStrudel(
   pattern: Pattern,
-  voiceMap?: Record<string, string>
+  options?: Record<string, string> | StrudelExportOptions
 ): string {
+  let voiceMap: Record<string, string> | undefined;
+  let samplesDeclaration: string | undefined;
+  let compact = true;
+
+  if (options) {
+    if ('samplesDeclaration' in options || 'compact' in options || 'voiceMap' in options) {
+      const opts = options as StrudelExportOptions;
+      voiceMap = opts.voiceMap;
+      samplesDeclaration = opts.samplesDeclaration;
+      if (opts.compact !== undefined) compact = opts.compact;
+    } else {
+      voiceMap = options as Record<string, string>;
+    }
+  }
+
   const barTicks = 16 * (PPQ / 4); // 384
   const lines: string[] = [];
 
@@ -42,7 +105,8 @@ export function exportToStrudel(
       stepGrid[stepIdx] = token;
     }
 
-    let trackExpr = `s("${stepGrid.join(' ')}")`;
+    const miniNotation = compact ? compactMiniNotation(stepGrid, token) : stepGrid.join(' ');
+    let trackExpr = `s("${miniNotation}")`;
 
     // Polymetric ratio if cycle length differs from 1 bar (384 ticks)
     if (track.cycleTicks !== barTicks) {
@@ -67,8 +131,16 @@ export function exportToStrudel(
   }
 
   if (lines.length === 0) {
-    return '// Empty Atomic Rhythm Pattern\ns("~")';
+    const emptyPattern = '// Empty Atomic Rhythm Pattern\ns("~")';
+    if (samplesDeclaration && samplesDeclaration.trim().length > 0) {
+      return `${samplesDeclaration.trim()}\n\n${emptyPattern}`;
+    }
+    return emptyPattern;
   }
 
-  return `// Atomic Rhythm pattern (${pattern.bars} bar(s))\nstack(\n${lines.join(',\n')}\n)`;
+  const stackCode = `// Atomic Rhythm pattern (${pattern.bars} bar(s))\nstack(\n${lines.join(',\n')}\n)`;
+  if (samplesDeclaration && samplesDeclaration.trim().length > 0) {
+    return `${samplesDeclaration.trim()}\n\n${stackCode}`;
+  }
+  return stackCode;
 }

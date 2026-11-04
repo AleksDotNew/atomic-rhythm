@@ -35,6 +35,27 @@ describe('Exporters', () => {
     expect(getStrudelToken('openhat')).toBe('oh');
   });
 
+  it('exports compact algorithmic Strudel code with Euclidean syntax or rest compression and samples header', () => {
+    const methane = parseSmiles('C');
+    const pat = buildMoleculePattern(methane, { mode: 'overlay' });
+
+    // Export with samplesDeclaration
+    const code = exportToStrudel(pat, {
+      samplesDeclaration: "samples('github:tidalcycles/dirt-samples')",
+      compact: true,
+    });
+
+    // Contains samples declaration header
+    expect(code).toContain("samples('github:tidalcycles/dirt-samples')");
+
+    // Contains either Euclidean notation (e.g. bd(k, n)) or compressed rests (~!N)
+    const hasEuclideanOrCompressedRest = /\([0-9]+,[0-9]+\)|~!/.test(code);
+    expect(hasEuclideanOrCompressedRest).toBe(true);
+
+    // Code does NOT have 7 consecutive standalone tildes "~ ~ ~ ~ ~ ~ ~"
+    expect(code).not.toContain('~ ~ ~ ~ ~ ~ ~');
+  });
+
   it('generates valid Standard MIDI File bytes (MThd, MTrk headers)', () => {
     const h2 = parseSmiles('[H][H]');
     const pat = buildMoleculePattern(h2);
