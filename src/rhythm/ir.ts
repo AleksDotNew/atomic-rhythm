@@ -19,6 +19,8 @@ export interface Track {
 
 export interface Pattern {
   readonly timeSignature: readonly [number, number];
+  readonly timeSignatures?: readonly (readonly [number, number])[];
+  readonly barTicks?: readonly number[];
   readonly bars: number;
   readonly tracks: readonly Track[];
 }
@@ -26,7 +28,9 @@ export interface Pattern {
 export function createPattern(
   bars: number,
   tracks: Track[],
-  timeSignature: readonly [number, number] = [4, 4]
+  timeSignature: readonly [number, number] = [4, 4],
+  timeSignatures?: readonly (readonly [number, number])[],
+  barTicks?: readonly number[]
 ): Pattern {
   return {
     bars: Math.max(1, bars),
@@ -36,5 +40,7 @@ export function createPattern(
       events: [...t.events].sort((a, b) => a.tick - b.tick),
     })),
     timeSignature,
+    timeSignatures,
+    barTicks,
   };
 }
