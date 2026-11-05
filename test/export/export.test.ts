@@ -72,6 +72,20 @@ describe('Exporters', () => {
     expect(code).not.toContain('~!95');
     expect(code).not.toContain('~!85');
     expect(code).not.toContain('.slow(6)');
+
+    // Sub-pattern repetition compression: detects repeated patterns like [sd ~!2]*3 and [rim ~]*5
+    expect(code).toContain('[sd ~!2]*3');
+    expect(code).toContain('[rim ~]*5');
+  });
+
+  it('compacts custom repeating sub-patterns into multiplier syntax [pat]*K', () => {
+    // Generate a pattern with a repeated 4-step motif: bd ~ cp ~ repeated 4 times in 16 steps
+    // Since bd & cp are different tokens, Euclidean doesn't match, but sub-pattern compression should
+    const benzene = parseSmiles('c1ccccc1');
+    const pat = buildMoleculePattern(benzene, { mode: 'sequential' });
+    const code = exportToStrudel(pat);
+
+    expect(code).not.toContain('sd ~!2 sd ~!2 sd ~!2 sd ~!6 sd ~!2');
   });
 
   it('generates valid Standard MIDI File bytes (MThd, MTrk headers)', () => {

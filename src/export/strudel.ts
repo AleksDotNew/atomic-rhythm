@@ -28,7 +28,7 @@ export function getStrudelToken(voice: string, customMap?: Record<string, string
   return 'perc';
 }
 
-function runLengthCompress(steps: string[]): string {
+function runLengthCompress(steps: string[]): string[] {
   const parts: string[] = [];
   let i = 0;
   while (i < steps.length) {
@@ -44,7 +44,50 @@ function runLengthCompress(steps: string[]): string {
     }
     i += count;
   }
-  return parts.join(' ');
+  return parts;
+}
+
+function compressSubpatterns(parts: string[]): string[] {
+  const result: string[] = [];
+  let i = 0;
+  while (i < parts.length) {
+    let bestL = -1;
+    let bestCount = 0;
+
+    // Check pattern lengths L from 2 up to half the remaining tokens
+    const maxL = Math.floor((parts.length - i) / 2);
+    for (let L = 2; L <= maxL; L++) {
+      let count = 1;
+      while (i + (count + 1) * L <= parts.length) {
+        let match = true;
+        for (let j = 0; j < L; j++) {
+          if (parts[i + count * L + j] !== parts[i + j]) {
+            match = false;
+            break;
+          }
+        }
+        if (!match) break;
+        count++;
+      }
+      if (count >= 2) {
+        // Prefer the match that consumes the most tokens (L * count)
+        if (L * count > bestL * bestCount) {
+          bestL = L;
+          bestCount = count;
+        }
+      }
+    }
+
+    if (bestL > 0 && bestCount >= 2) {
+      const sub = parts.slice(i, i + bestL).join(' ');
+      result.push(`[${sub}]*${bestCount}`);
+      i += bestL * bestCount;
+    } else {
+      result.push(parts[i]);
+      i++;
+    }
+  }
+  return result;
 }
 
 function compactMiniNotation(stepGrid: string[], token: string): string {
@@ -66,7 +109,9 @@ function compactMiniNotation(stepGrid: string[], token: string): string {
     }
   }
 
-  return runLengthCompress(stepGrid);
+  const rleParts = runLengthCompress(stepGrid);
+  const subpatternParts = compressSubpatterns(rleParts);
+  return subpatternParts.join(' ');
 }
 
 export function exportToStrudel(
@@ -133,7 +178,7 @@ export function exportToStrudel(
           // Single hit on downbeat can be represented cleanly as just the token
           if (nonTildes.length === 1 && bar[0] === token) return token;
           const compacted = compactMiniNotation(bar, token);
-          if (compacted.includes(' ') && !compacted.startsWith('[')) {
+          if (compacted.includes(' ')) {
             return `[${compacted}]`;
           }
           return compacted;
