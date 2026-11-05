@@ -6,12 +6,13 @@ import { applyExcitationToAtom } from './excitation';
 import { applyGenreSkeleton, GenreSkeletonId } from './genre-skeletons';
 import { createPattern, Pattern, PPQ, RhythmEvent, Track } from './ir';
 import { DEFAULT_MOD_MATRIX, ModulationMatrix } from './modmatrix';
-import { buildMotifTracks } from './motifs';
+import { buildMotifTracks, MotifMode, RingActiveSpan } from './motifs';
 import { adjustPanForVoice } from './panning';
 import { resolveBarMeters, TimeSignatureOption } from './time-signature';
 
 export type PlaybackMode = 'sequential' | 'overlay';
 export type FormMode = 'direct' | 'assembly';
+export type { MotifMode } from './motifs';
 
 export interface MoleculePatternOptions {
   readonly mode?: PlaybackMode;
@@ -24,6 +25,59 @@ export interface MoleculePatternOptions {
   readonly atomPans?: readonly number[];
   readonly genre?: GenreSkeletonId;
   readonly timeSignatureOption?: TimeSignatureOption;
+  readonly motifMode?: MotifMode;
+}
+
+interface ActiveSpans {
+  readonly ringActiveSpans: Map<number, RingActiveSpan>;
+  readonly groupActiveTicks: number[][];
+}
+
+function calculateActiveSpans(
+  analysis: MolecularAnalysis,
+  barAtoms: readonly (readonly number[])[],
+  barStartTicks: readonly number[],
+  fullCycleTicks: number
+): ActiveSpans {
+  const ringActiveSpans = new Map<number, RingActiveSpan>();
+  const totalBars = barAtoms.length;
+
+  for (let rIdx = 0; rIdx < analysis.rings.length; rIdx++) {
+    const ring = analysis.rings[rIdx];
+    const ringAtomSet = new Set(ring.atomIndices);
+    const matchingBars: number[] = [];
+
+    for (let b = 0; b < totalBars; b++) {
+      if (barAtoms[b].some(a => ringAtomSet.has(a))) {
+        matchingBars.push(b);
+      }
+    }
+
+    if (matchingBars.length > 0) {
+      const minBar = Math.min(...matchingBars);
+      const maxBar = Math.max(...matchingBars);
+      const startTick = barStartTicks[minBar];
+      const endTick = barStartTicks[maxBar + 1] ?? fullCycleTicks;
+      ringActiveSpans.set(rIdx, { startTick, endTick });
+    }
+  }
+
+  const groupActiveTicks: number[][] = [];
+  for (let fgIdx = 0; fgIdx < analysis.functionalGroups.length; fgIdx++) {
+    const fg = analysis.functionalGroups[fgIdx];
+    const fgAtomSet = new Set(fg.atomIndices);
+    const ticks: number[] = [];
+
+    for (let b = 0; b < totalBars; b++) {
+      if (barAtoms[b].some(a => fgAtomSet.has(a))) {
+        ticks.push(barStartTicks[b]);
+      }
+    }
+
+    groupActiveTicks.push(ticks.length > 0 ? ticks : [0]);
+  }
+
+  return { ringActiveSpans, groupActiveTicks };
 }
 
 export function buildMoleculePattern(
@@ -189,8 +243,28 @@ export function buildMoleculePattern(
         }
       }
 
+      // Calculate active spans for rings and functional groups
+      const barAtoms: number[][] = [];
+      for (let u = 0; u < totalBars; u++) {
+        const unit = analysis.structuralUnits[u];
+        barAtoms.push(unit ? [unit.heavyAtomIndex, ...unit.peripheralAtomIndices] : []);
+      }
+      const { ringActiveSpans, groupActiveTicks } = calculateActiveSpans(
+        analysis,
+        barAtoms,
+        barStartTicks,
+        fullCycleTicks
+      );
+
       // Add motif tracks (rings, functional groups)
-      const motifTracks = buildMotifTracks(analysis, totalBars);
+      const motifTracks = buildMotifTracks(analysis, {
+        mode: options.motifMode ?? 'loop',
+        totalTicks: fullCycleTicks,
+        totalBars,
+        ringActiveSpans,
+        groupActiveTicks,
+        barStartTicks,
+      });
       for (const mt of motifTracks) {
         for (const evt of mt.events) {
           addEvent(mt.voice, fullCycleTicks, evt);
@@ -305,7 +379,28 @@ export function buildMoleculePattern(
         }
       }
 
-      const motifTracks = buildMotifTracks(analysis, totalBars);
+      // Calculate active spans for rings and functional groups
+      const barAtoms: number[][] = [];
+      for (let b = 0; b < totalBars; b++) {
+        const startSeq = b * apb;
+        const endSeq = Math.min(sequence.length, (b + 1) * apb);
+        barAtoms.push(sequence.slice(startSeq, endSeq));
+      }
+      const { ringActiveSpans, groupActiveTicks } = calculateActiveSpans(
+        analysis,
+        barAtoms,
+        barStartTicks,
+        fullCycleTicks
+      );
+
+      const motifTracks = buildMotifTracks(analysis, {
+        mode: options.motifMode ?? 'loop',
+        totalTicks: fullCycleTicks,
+        totalBars,
+        ringActiveSpans,
+        groupActiveTicks,
+        barStartTicks,
+      });
       for (const mt of motifTracks) {
         for (const evt of mt.events) {
           addEvent(mt.voice, fullCycleTicks, evt);
@@ -365,7 +460,22 @@ export function buildMoleculePattern(
       }
     }
 
-    const motifTracks = buildMotifTracks(analysis, totalBars);
+    const barAtoms: number[][] = [mol.atoms.map((_, idx) => idx)];
+    const { ringActiveSpans, groupActiveTicks } = calculateActiveSpans(
+      analysis,
+      barAtoms,
+      [0, fullCycleTicks],
+      fullCycleTicks
+    );
+
+    const motifTracks = buildMotifTracks(analysis, {
+      mode: options.motifMode ?? 'loop',
+      totalTicks: fullCycleTicks,
+      totalBars: 1,
+      ringActiveSpans,
+      groupActiveTicks,
+      barStartTicks: [0],
+    });
     for (const mt of motifTracks) {
       for (const evt of mt.events) {
         addEvent(mt.voice, fullCycleTicks, evt);

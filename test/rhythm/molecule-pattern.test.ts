@@ -214,6 +214,72 @@ describe('buildMoleculePattern', () => {
     expect(pat.timeSignatures![0]).toEqual([5, 8]);
     expect(pat.barTicks![0]).toBe(240);
   });
+
+  it('supports continuous looping motifs across all bars in multi-bar molecules (loop mode)', () => {
+    // Serotonin: bicyclic indole core (5-ring and 6-ring) + OH and NH2 functional groups
+    const serotonin = parseSmiles('NCCc1c[nH]c2ccc(O)cc12');
+    const pat = buildMoleculePattern(serotonin, {
+      mode: 'sequential',
+      motifMode: 'loop',
+    });
+
+    expect(pat.bars).toBeGreaterThanOrEqual(10);
+    const lastBarStartTick = (pat.bars - 1) * 384;
+
+    const ring5Track = pat.tracks.find(t => t.voice === 'motif.ring5');
+    const ring6Track = pat.tracks.find(t => t.voice === 'motif.ring6');
+    const groupTrack = pat.tracks.find(t => t.voice === 'motif.group');
+
+    expect(ring5Track).toBeDefined();
+    expect(ring6Track).toBeDefined();
+    expect(groupTrack).toBeDefined();
+
+    // In loop mode, ring motifs and groups are NOT silent in later bars!
+    const ring5EventsInLateBars = ring5Track!.events.filter(e => e.tick >= lastBarStartTick);
+    expect(ring5EventsInLateBars.length).toBeGreaterThan(0);
+
+    const ring6EventsInLateBars = ring6Track!.events.filter(e => e.tick >= lastBarStartTick);
+    expect(ring6EventsInLateBars.length).toBeGreaterThan(0);
+
+    const groupEventsInLateBars = groupTrack!.events.filter(e => e.tick >= 768);
+    expect(groupEventsInLateBars.length).toBeGreaterThan(0);
+  });
+
+  it('restricts motifs to active ring/group atoms in span mode', () => {
+    const serotonin = parseSmiles('NCCc1c[nH]c2ccc(O)cc12');
+    const pat = buildMoleculePattern(serotonin, {
+      mode: 'sequential',
+      motifMode: 'span',
+    });
+
+    const ring5Track = pat.tracks.find(t => t.voice === 'motif.ring5');
+    expect(ring5Track).toBeDefined();
+
+    // In span mode, ring 5 has events, but stops once the playback leaves the ring units
+    const maxTick = Math.max(...ring5Track!.events.map(e => e.tick));
+    const fullCycleTicks = pat.bars * 384;
+    // Ring 5 stops before the final tail bars
+    expect(maxTick).toBeLessThan(fullCycleTicks);
+  });
+
+  it('plays motifs only once at the beginning in once mode (legacy intro)', () => {
+    const serotonin = parseSmiles('NCCc1c[nH]c2ccc(O)cc12');
+    const pat = buildMoleculePattern(serotonin, {
+      mode: 'sequential',
+      motifMode: 'once',
+    });
+
+    const ring6Track = pat.tracks.find(t => t.voice === 'motif.ring6');
+    expect(ring6Track).toBeDefined();
+
+    // Only 1 cycle (6 pulses), all within the first 288 ticks
+    expect(ring6Track!.events.length).toBe(6);
+    expect(ring6Track!.events.every(e => e.tick < 288)).toBe(true);
+
+    // Later bars (tick >= 384) have zero ring 6 events
+    const laterEvents = ring6Track!.events.filter(e => e.tick >= 384);
+    expect(laterEvents.length).toBe(0);
+  });
 });
 
 

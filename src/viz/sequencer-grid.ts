@@ -147,6 +147,7 @@ export class SequencerGridView {
       const track = pattern.tracks[tIdx];
       const row = document.createElement('div');
       row.className = 'sequencer-row';
+      row.dataset.voice = track.voice;
       row.style.display = 'flex';
       row.style.alignItems = 'center';
       row.style.gap = '4px';
@@ -190,9 +191,13 @@ export class SequencerGridView {
         const step = document.createElement('div');
         step.className = 'seq-step';
         step.dataset.step = `${s}`;
+        step.dataset.voice = track.voice;
 
         const hit = hitsMap.get(s);
         step.dataset.atomIndex = hit?.atomIndex !== undefined ? `${hit.atomIndex}` : '';
+        if (hit) {
+          step.dataset.hit = 'true';
+        }
         const info = this.stepBarInfo[s];
         const partNum = info ? info.barIndex + 1 : Math.floor(s / 16) + 1;
         const localStep = info ? info.localStep : s % 16;

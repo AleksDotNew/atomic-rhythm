@@ -19,7 +19,7 @@ import { computeAtomPans, formatPanLabel } from '../rhythm/panning';
 import { computeMoleculeLayout } from '../viz/layout';
 import { Pattern } from '../rhythm/ir';
 import { DEFAULT_MOD_MATRIX, ModulationMatrix, ModRoute, ModSource, ModDest } from '../rhythm/modmatrix';
-import { buildMoleculePattern, FormMode, PlaybackMode } from '../rhythm/molecule-pattern';
+import { buildMoleculePattern, FormMode, PlaybackMode, MotifMode } from '../rhythm/molecule-pattern';
 import { GenreSkeletonId, GENRE_DEFAULT_BPM } from '../rhythm/genre-skeletons';
 import { TimeSignatureOption } from '../rhythm/time-signature';
 import { buildFormSequence } from '../rhythm/form';
@@ -41,6 +41,7 @@ export class App {
   private formMode: FormMode = 'direct';
   private currentGenre: GenreSkeletonId = 'raw';
   private currentTimeSignature: TimeSignatureOption = '4/4';
+  private currentMotifMode: MotifMode = 'loop';
   private activePresetCategory: string = 'all';
   private atomsPerBar: number = 2;
   private orderStrategy: OrderStrategy = 'structural';
@@ -78,6 +79,7 @@ export class App {
       atomPans: this.atomPans,
       genre: this.currentGenre,
       timeSignatureOption: this.currentTimeSignature,
+      motifMode: this.currentMotifMode,
     });
   }
 
@@ -152,6 +154,15 @@ export class App {
             <select id="select-form">
               <option value="direct">Direct Loop</option>
               <option value="assembly">Atom Assembly</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="select-motif-mode">Motifs</label>
+            <select id="select-motif-mode">
+              <option value="loop">Continuous Loop</option>
+              <option value="span">Ring Active Span</option>
+              <option value="once">Intro Only</option>
             </select>
           </div>
 
@@ -373,6 +384,7 @@ export class App {
       atomPans: this.atomPans,
       genre: this.currentGenre,
       timeSignatureOption: this.currentTimeSignature,
+      motifMode: this.currentMotifMode,
     });
 
     this.svgView.selectedAtomIndex = this.selectedAtomIndex;
@@ -620,6 +632,7 @@ export class App {
     const selectMode = root.querySelector('#select-mode') as HTMLSelectElement;
     const selectOrderStrategy = root.querySelector('#select-order-strategy') as HTMLSelectElement;
     const selectForm = root.querySelector('#select-form') as HTMLSelectElement;
+    const selectMotifMode = root.querySelector('#select-motif-mode') as HTMLSelectElement | null;
     const inputApb = root.querySelector('#input-apb') as HTMLInputElement;
     const inputSmiles = root.querySelector('#input-smiles') as HTMLInputElement;
     const smilesError = root.querySelector('#smiles-error') as HTMLElement;
@@ -911,6 +924,12 @@ export class App {
     // Form change
     selectForm.addEventListener('change', () => {
       this.formMode = selectForm.value as FormMode;
+      this.updateAll();
+    });
+
+    // Motif Mode change
+    selectMotifMode?.addEventListener('change', () => {
+      this.currentMotifMode = (selectMotifMode.value as MotifMode) || 'loop';
       this.updateAll();
     });
 

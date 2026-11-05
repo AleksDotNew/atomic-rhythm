@@ -277,5 +277,37 @@ describe('App interactive UI and Modulation Matrix', () => {
     adrenalineCard?.click();
     expect(inputSmiles?.value).toContain('CNC[C@@H]');
   });
+
+  // @vitest-environment happy-dom
+  it('switches motif modes (loop, span, once) via UI selector', () => {
+    const root = document.createElement('div');
+    const app = new App();
+    app.mount(root);
+
+    const selectMotif = root.querySelector('#select-motif-mode') as HTMLSelectElement | null;
+    expect(selectMotif).toBeTruthy();
+    expect(selectMotif?.value).toBe('loop');
+
+    // Default Benzene in sequential structural mode has 6 bars.
+    // In loop mode, motif.ring6 has hits across multiple bars in the sequencer grid.
+    const stepsInLoop = root.querySelectorAll('.seq-step[data-voice="motif.ring6"][data-hit="true"]');
+    // At least 48 pulses in loop mode
+    expect(stepsInLoop.length).toBeGreaterThan(6);
+
+    // Switch to 'once' mode
+    selectMotif!.value = 'once';
+    selectMotif!.dispatchEvent(new Event('change'));
+
+    // In once mode, motif.ring6 only has 6 pulses (in bar 1)
+    const stepsInOnce = root.querySelectorAll('.seq-step[data-voice="motif.ring6"][data-hit="true"]');
+    expect(stepsInOnce.length).toBe(6);
+
+    // Switch to 'span' mode
+    selectMotif!.value = 'span';
+    selectMotif!.dispatchEvent(new Event('change'));
+
+    const stepsInSpan = root.querySelectorAll('.seq-step[data-voice="motif.ring6"][data-hit="true"]');
+    expect(stepsInSpan.length).toBeGreaterThan(6);
+  });
 });
 

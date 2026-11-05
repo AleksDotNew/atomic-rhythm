@@ -73,9 +73,15 @@ describe('Exporters', () => {
     expect(code).not.toContain('~!85');
     expect(code).not.toContain('.slow(6)');
 
-    // Sub-pattern repetition compression: detects repeated patterns like [sd ~!2]*3 and [rim ~]*5
+    // Sub-pattern repetition compression: detects repeated patterns like [sd ~!2]*3
     expect(code).toContain('[sd ~!2]*3');
-    expect(code).toContain('[rim ~]*5');
+    // In continuous loop mode (default), periodic ring motifs fold into clean Euclidean notation
+    expect(code).toContain('s("rim(8,16)")');
+
+    // In once mode (intro only), ring motif stays in bar 1 with [rim ~]*5
+    const patOnce = buildMoleculePattern(benzene, { mode: 'sequential', motifMode: 'once' });
+    const codeOnce = exportToStrudel(patOnce, { compact: true });
+    expect(codeOnce).toContain('[rim ~]*5');
   });
 
   it('compacts custom repeating sub-patterns into multiplier syntax [pat]*K', () => {
@@ -101,7 +107,15 @@ describe('Exporters', () => {
     // 1. Crash and sparse tracks should use compressed rests like ~!N
     expect(code).toMatch(/s\("<.*cr.*>"\)/);
     expect(code).toContain('~!9');
-    expect(code).toContain('~!13');
+
+    // In once mode, ring motifs in a 14-bar molecule produce 13 bars of rests ~!13
+    const patOnce = buildMoleculePattern(caffeine, {
+      mode: 'sequential',
+      atomPans: pans,
+      motifMode: 'once',
+    });
+    const codeOnce = exportToStrudel(patOnce, { compact: true });
+    expect(codeOnce).toContain('~!13');
 
     // 2. No long consecutive spaces of identical elements inside <...>
     expect(code).not.toMatch(/~ ~ ~ ~ ~/);
