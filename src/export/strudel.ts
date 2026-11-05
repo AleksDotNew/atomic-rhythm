@@ -105,13 +105,51 @@ export function exportToStrudel(
       stepGrid[stepIdx] = token;
     }
 
-    const miniNotation = compact ? compactMiniNotation(stepGrid, token) : stepGrid.join(' ');
-    let trackExpr = `s("${miniNotation}")`;
+    const stepsPerBar = 16;
+    const numBars = Math.round(track.cycleTicks / barTicks);
+    let trackExpr: string;
 
-    // Polymetric ratio if cycle length differs from 1 bar (384 ticks)
-    if (track.cycleTicks !== barTicks) {
-      const ratio = +(track.cycleTicks / barTicks).toFixed(3);
-      trackExpr += `.slow(${ratio})`;
+    // Multi-bar pattern analysis (e.g. 6-bar benzene, 5-bar cyclopentane)
+    if (compact && track.cycleTicks % barTicks === 0 && numBars > 1) {
+      const barChunks: string[][] = [];
+      for (let b = 0; b < numBars; b++) {
+        barChunks.push(stepGrid.slice(b * stepsPerBar, (b + 1) * stepsPerBar));
+      }
+
+      const firstBar = barChunks[0];
+      const allBarsIdentical = barChunks.every(bar =>
+        bar.every((step, idx) => step === firstBar[idx])
+      );
+
+      if (allBarsIdentical) {
+        // Every bar has the identical rhythm; fold into 1 standard cycle without .slow()
+        const miniNotation = compactMiniNotation(firstBar, token);
+        trackExpr = `s("${miniNotation}")`;
+      } else {
+        // Bars differ: use idiomatic Strudel cycle progression <bar0 bar1 ...>
+        const barStrings = barChunks.map(bar => {
+          const nonTildes = bar.filter(s => s !== '~');
+          if (nonTildes.length === 0) return '~';
+          // Single hit on downbeat can be represented cleanly as just the token
+          if (nonTildes.length === 1 && bar[0] === token) return token;
+          const compacted = compactMiniNotation(bar, token);
+          if (compacted.includes(' ') && !compacted.startsWith('[')) {
+            return `[${compacted}]`;
+          }
+          return compacted;
+        });
+
+        trackExpr = `s("<${barStrings.join(' ')}>")`;
+      }
+    } else {
+      const miniNotation = compact ? compactMiniNotation(stepGrid, token) : stepGrid.join(' ');
+      trackExpr = `s("${miniNotation}")`;
+
+      // Polymetric ratio if cycle length differs from 1 bar (384 ticks)
+      if (track.cycleTicks !== barTicks) {
+        const ratio = +(track.cycleTicks / barTicks).toFixed(3);
+        trackExpr += `.slow(${ratio})`;
+      }
     }
 
     // Attach stereo panning if events have pan values (converted to Strudel 0..1 range)

@@ -56,6 +56,24 @@ describe('Exporters', () => {
     expect(code).not.toContain('~ ~ ~ ~ ~ ~ ~');
   });
 
+  it('exports concise algorithmic Strudel code without sheets of rests or multi-bar duplication', () => {
+    const benzene = parseSmiles('c1ccccc1');
+    const pat = buildMoleculePattern(benzene, { mode: 'sequential' });
+    const code = exportToStrudel(pat, { compact: true });
+
+    // Periodic tracks should fold to 1 cycle: bd(6,16) and hh(6,16) without .slow(6)
+    expect(code).toContain('s("bd(6,16)")');
+    expect(code).toContain('s("hh(6,16)")');
+
+    // Sparse or multi-bar changing tracks should use angle bracket cycle notation <...>
+    expect(code).toMatch(/s\("<cr\s+.*>"\)/);
+
+    // Should NOT have 95 rests in a single string or multi-bar identical duplicates
+    expect(code).not.toContain('~!95');
+    expect(code).not.toContain('~!85');
+    expect(code).not.toContain('.slow(6)');
+  });
+
   it('generates valid Standard MIDI File bytes (MThd, MTrk headers)', () => {
     const h2 = parseSmiles('[H][H]');
     const pat = buildMoleculePattern(h2);
