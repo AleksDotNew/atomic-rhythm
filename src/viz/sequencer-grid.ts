@@ -32,6 +32,7 @@ export class SequencerGridView {
   private pattern: Pattern | null = null;
   private stepElements: HTMLElement[][] = [];
   private headerStepElements: HTMLElement[] = [];
+  private stepBarInfo: { barIndex: number; localStep: number; isBarStart: boolean; isBarEnd: boolean }[] = [];
   private currentlyHighlightedAtoms: number[] | null = null;
   public onStepClick?: (atomIndex: number) => void;
 
@@ -44,6 +45,7 @@ export class SequencerGridView {
     this.container.innerHTML = '';
     this.stepElements = [];
     this.headerStepElements = [];
+    this.stepBarInfo = [];
 
     const wrapper = document.createElement('div');
     wrapper.className = 'sequencer-wrapper';
@@ -59,8 +61,24 @@ export class SequencerGridView {
     wrapper.style.boxSizing = 'border-box';
 
     const stepTicks = PPQ / 4; // 24 ticks (16th note)
-    const totalBars = pattern.bars;
-    const maxSteps = totalBars * 16;
+    const barStepCounts: number[] = pattern.barTicks && pattern.barTicks.length > 0
+      ? pattern.barTicks.map(t => Math.max(1, Math.round(t / stepTicks)))
+      : Array.from({ length: pattern.bars }, () => 16);
+    const maxSteps = barStepCounts.reduce((acc, c) => acc + c, 0);
+
+    let curBar = 0;
+    let curLocal = 0;
+    for (let s = 0; s < maxSteps; s++) {
+      const stepsInCurBar = barStepCounts[curBar] ?? 16;
+      const isBarStart = curLocal === 0;
+      const isBarEnd = curLocal === stepsInCurBar - 1;
+      this.stepBarInfo.push({ barIndex: curBar, localStep: curLocal, isBarStart, isBarEnd });
+      curLocal++;
+      if (curLocal >= stepsInCurBar) {
+        curBar++;
+        curLocal = 0;
+      }
+    }
 
     // Header row showing Part / Bar markers
     const headerRow = document.createElement('div');
@@ -98,22 +116,24 @@ export class SequencerGridView {
       stepHeader.style.fontFamily = 'monospace';
       stepHeader.style.transition = 'all 0.12s ease';
 
-      const isPartStart = s % 16 === 0;
-      const partNum = Math.floor(s / 16) + 1;
+      const info = this.stepBarInfo[s];
+      const isPartStart = info ? info.isBarStart : s % 16 === 0;
+      const partNum = info ? info.barIndex + 1 : Math.floor(s / 16) + 1;
+      const localStep = info ? info.localStep : s % 16;
 
       if (isPartStart) {
         stepHeader.textContent = `P${partNum}`;
         stepHeader.style.color = '#38bdf8';
         stepHeader.style.fontWeight = 'bold';
-      } else if (s % 4 === 0) {
-        stepHeader.textContent = `${(s % 16) / 4 + 1}`;
+      } else if (localStep % 4 === 0) {
+        stepHeader.textContent = `${Math.floor(localStep / 4) + 1}`;
         stepHeader.style.color = '#64748b';
       } else {
         stepHeader.textContent = '·';
         stepHeader.style.color = '#334155';
       }
 
-      if (s % 16 === 15) {
+      if (info?.isBarEnd || s % 16 === 15) {
         stepHeader.style.marginRight = '6px';
       }
 
@@ -173,9 +193,12 @@ export class SequencerGridView {
 
         const hit = hitsMap.get(s);
         step.dataset.atomIndex = hit?.atomIndex !== undefined ? `${hit.atomIndex}` : '';
-        step.dataset.part = `${Math.floor(s / 16) + 1}`;
+        const info = this.stepBarInfo[s];
+        const partNum = info ? info.barIndex + 1 : Math.floor(s / 16) + 1;
+        const localStep = info ? info.localStep : s % 16;
+        step.dataset.part = `${partNum}`;
 
-        const isDownbeat = s % 4 === 0;
+        const isDownbeat = localStep % 4 === 0;
 
         if (hit) {
           step.style.background = voiceColor;
@@ -193,8 +216,8 @@ export class SequencerGridView {
           step.style.background = isDownbeat ? '#334155' : '#1e293b';
         }
 
-        // Add visual gap at end of each 16-step part
-        if (s % 16 === 15) {
+        // Add visual gap at end of each part
+        if (info?.isBarEnd || s % 16 === 15) {
           step.style.marginRight = '6px';
           step.style.borderRight = '1px solid #475569';
         }
@@ -246,7 +269,7 @@ export class SequencerGridView {
         if (evt.atomIndex !== undefined && atomSet.has(evt.atomIndex)) {
           const s = Math.round(evt.tick / stepTicks);
           targetSteps.add(s);
-          const partNum = Math.floor(s / 16) + 1;
+          const partNum = (this.stepBarInfo[s]?.barIndex ?? Math.floor(s / 16)) + 1;
           targetParts.add(partNum);
         }
       }
@@ -254,7 +277,7 @@ export class SequencerGridView {
 
     for (let s = 0; s < this.headerStepElements.length; s++) {
       const headerEl = this.headerStepElements[s];
-      const partNum = Math.floor(s / 16) + 1;
+      const partNum = (this.stepBarInfo[s]?.barIndex ?? Math.floor(s / 16)) + 1;
       if (targetParts.has(partNum)) {
         headerEl.classList.add('seq-part-header-active');
       } else {
@@ -266,7 +289,7 @@ export class SequencerGridView {
       for (let s = 0; s < this.stepElements[t].length; s++) {
         const el = this.stepElements[t][s];
         const stepAtomIdxStr = el.dataset.atomIndex;
-        const partNum = Math.floor(s / 16) + 1;
+        const partNum = (this.stepBarInfo[s]?.barIndex ?? Math.floor(s / 16)) + 1;
 
         el.classList.remove('step-highlight-active', 'step-part-column', 'step-dimmed');
 
@@ -292,8 +315,9 @@ export class SequencerGridView {
   updatePlayhead(currentTick: number): void {
     if (!this.pattern) return;
     const stepTicks = PPQ / 4; // 24 ticks
-    const maxSteps = this.pattern.bars * 16;
-    const currentStep = Math.floor(currentTick / stepTicks) % maxSteps;
+    const totalTicks = this.pattern.totalTicks || (this.pattern.bars * 384);
+    const normalizedTick = currentTick % totalTicks;
+    const currentStep = Math.min(this.headerStepElements.length - 1, Math.max(0, Math.floor(normalizedTick / stepTicks)));
 
     for (let tIdx = 0; tIdx < this.stepElements.length; tIdx++) {
       const steps = this.stepElements[tIdx];

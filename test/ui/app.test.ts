@@ -173,5 +173,59 @@ describe('App interactive UI and Modulation Matrix', () => {
     expect(voiceOptions).toContain('crash');
     expect(voiceOptions).toContain('openhat');
   });
+
+  // @vitest-environment happy-dom
+  it('controls genre skeletons, auto-adapts BPM, and supports time signatures', () => {
+    const root = document.createElement('div');
+    const app = new App();
+    app.mount(root);
+
+    const genreSelect = root.querySelector('#select-genre') as HTMLSelectElement | null;
+    const meterSelect = root.querySelector('#select-meter') as HTMLSelectElement | null;
+    const inputBpm = root.querySelector('#input-bpm') as HTMLInputElement | null;
+    const effectiveBpmLabel = root.querySelector('#effective-bpm') as HTMLElement | null;
+
+    expect(genreSelect).toBeTruthy();
+    expect(meterSelect).toBeTruthy();
+    expect(inputBpm).toBeTruthy();
+
+    expect(genreSelect?.value).toBe('raw');
+    expect(meterSelect?.value).toBe('4/4');
+    expect(inputBpm?.value).toBe('120');
+
+    // Switch to Drum & Bass
+    genreSelect!.value = 'dnb';
+    genreSelect!.dispatchEvent(new Event('change'));
+
+    expect(inputBpm?.value).toBe('174');
+    expect(effectiveBpmLabel?.textContent).toContain('174 bpm');
+
+    // Switch to Techno
+    genreSelect!.value = 'techno';
+    genreSelect!.dispatchEvent(new Event('change'));
+
+    expect(inputBpm?.value).toBe('128');
+    expect(effectiveBpmLabel?.textContent).toContain('128 bpm');
+
+    // Switch to Hip-Hop
+    genreSelect!.value = 'hiphop';
+    genreSelect!.dispatchEvent(new Event('change'));
+
+    expect(inputBpm?.value).toBe('90');
+    expect(effectiveBpmLabel?.textContent).toContain('90 bpm');
+
+    // Switch Time Signature to 7/8
+    meterSelect!.value = '7/8';
+    meterSelect!.dispatchEvent(new Event('change'));
+
+    // Sequencer headers should render steps for 7/8
+    const steps = root.querySelectorAll('.seq-step');
+    expect(steps.length).toBeGreaterThan(0);
+
+    // Switch Time Signature to Adaptive
+    meterSelect!.value = 'adaptive';
+    meterSelect!.dispatchEvent(new Event('change'));
+    expect(meterSelect?.value).toBe('adaptive');
+  });
 });
 

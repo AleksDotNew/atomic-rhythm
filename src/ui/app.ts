@@ -20,6 +20,8 @@ import { computeMoleculeLayout } from '../viz/layout';
 import { Pattern } from '../rhythm/ir';
 import { DEFAULT_MOD_MATRIX, ModulationMatrix, ModRoute, ModSource, ModDest } from '../rhythm/modmatrix';
 import { buildMoleculePattern, FormMode, PlaybackMode } from '../rhythm/molecule-pattern';
+import { GenreSkeletonId, GENRE_DEFAULT_BPM } from '../rhythm/genre-skeletons';
+import { TimeSignatureOption } from '../rhythm/time-signature';
 import { buildFormSequence } from '../rhythm/form';
 import { loadRecipes, saveRecipe, SavedRecipe } from '../storage/db';
 import { MoleculeSvgView, VOICE_BADGES, ELEMENT_COLORS } from '../viz/molecule-svg';
@@ -37,6 +39,8 @@ export class App {
   private temperature: number = 0;
   private playbackMode: PlaybackMode = 'sequential';
   private formMode: FormMode = 'direct';
+  private currentGenre: GenreSkeletonId = 'raw';
+  private currentTimeSignature: TimeSignatureOption = '4/4';
   private atomsPerBar: number = 2;
   private orderStrategy: OrderStrategy = 'structural';
   private customOrder: number[] = [];
@@ -71,6 +75,8 @@ export class App {
       orderStrategy: this.orderStrategy,
       customOrder: this.customOrder,
       atomPans: this.atomPans,
+      genre: this.currentGenre,
+      timeSignatureOption: this.currentTimeSignature,
     });
   }
 
@@ -96,6 +102,29 @@ export class App {
             <input type="range" id="slider-temp" min="-1000" max="1000" value="0" step="1" />
             <span id="phase-badge" class="phase-badge phase-liquid">💧 Liquid</span>
             <span id="effective-bpm" style="font-size: 0.8rem; color: var(--accent-cyan);">(120 bpm)</span>
+          </div>
+
+          <div class="control-group">
+            <label for="select-genre">Genre / Style</label>
+            <select id="select-genre">
+              <option value="raw">Raw Physics</option>
+              <option value="dnb">Drum & Bass (174 bpm)</option>
+              <option value="techno">Techno (128 bpm)</option>
+              <option value="hiphop">Hip-Hop (90 bpm)</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="select-meter">Meter</label>
+            <select id="select-meter">
+              <option value="4/4">4/4 Standard</option>
+              <option value="3/4">3/4 Waltz</option>
+              <option value="6/8">6/8 Compound</option>
+              <option value="7/8">7/8 Balkan</option>
+              <option value="5/8">5/8 Quintuple</option>
+              <option value="5/4">5/4 Five-Four</option>
+              <option value="adaptive">Adaptive (Rings)</option>
+            </select>
           </div>
 
           <div class="control-group">
@@ -334,6 +363,8 @@ export class App {
       orderStrategy: this.orderStrategy,
       customOrder: this.customOrder,
       atomPans: this.atomPans,
+      genre: this.currentGenre,
+      timeSignatureOption: this.currentTimeSignature,
     });
 
     this.svgView.selectedAtomIndex = this.selectedAtomIndex;
@@ -576,6 +607,8 @@ export class App {
     const sliderTemp = root.querySelector('#slider-temp') as HTMLInputElement;
     const tempVal = root.querySelector('#temp-val') as HTMLElement;
     const effectiveBpmLabel = root.querySelector('#effective-bpm') as HTMLElement;
+    const selectGenre = root.querySelector('#select-genre') as HTMLSelectElement | null;
+    const selectMeter = root.querySelector('#select-meter') as HTMLSelectElement | null;
     const selectMode = root.querySelector('#select-mode') as HTMLSelectElement;
     const selectOrderStrategy = root.querySelector('#select-order-strategy') as HTMLSelectElement;
     const selectForm = root.querySelector('#select-form') as HTMLSelectElement;
@@ -833,6 +866,25 @@ export class App {
       this.updateAll();
     });
 
+    // Genre change & Auto-BPM
+    selectGenre?.addEventListener('change', () => {
+      this.currentGenre = selectGenre.value as GenreSkeletonId;
+      this.baseBpm = GENRE_DEFAULT_BPM[this.currentGenre] || 120;
+      inputBpm.value = this.baseBpm.toString();
+      const effectiveBpm = calculateBpm(this.baseBpm, this.temperature);
+      effectiveBpmLabel.textContent = `(${effectiveBpm} bpm)`;
+      if (this.scheduler) {
+        this.scheduler.setBpm(effectiveBpm);
+      }
+      this.updateAll();
+    });
+
+    // Time signature change
+    selectMeter?.addEventListener('change', () => {
+      this.currentTimeSignature = selectMeter.value as TimeSignatureOption;
+      this.updateAll();
+    });
+
     // Mode change
     selectMode.addEventListener('change', () => {
       this.playbackMode = selectMode.value as PlaybackMode;
@@ -906,7 +958,9 @@ export class App {
 
     // Strudel Export
     btnExportStrudel.addEventListener('click', async () => {
+      const effectiveBpm = calculateBpm(this.baseBpm, this.temperature);
       const code = exportToStrudel(this.currentPattern, {
+        bpm: effectiveBpm,
         samplesDeclaration: this.activeSamplesSpec && this.activeSamplesSpec !== 'local'
           ? `samples('${this.activeSamplesSpec}')`
           : undefined,
