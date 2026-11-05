@@ -14,6 +14,15 @@ export const ELEMENT_COLORS: Record<string, string> = {
   Br: '#c084fc',
   I: '#e879f9',
   Na: '#fbbf24',
+  He: '#a5f3fc',
+  Fe: '#f59e0b',
+  Cu: '#f97316',
+  Ca: '#a3e635',
+  Mg: '#22c55e',
+  K: '#c084fc',
+  Mn: '#d946ef',
+  Si: '#94a3b8',
+  Au: '#eab308',
 };
 
 export const VOICE_BADGES: Record<string, { label: string; color: string }> = {

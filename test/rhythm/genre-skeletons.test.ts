@@ -79,3 +79,4 @@ describe('Genre Skeletons Engine', () => {
     expect(snare.events.length).toBeGreaterThan(0);
   });
 });
+

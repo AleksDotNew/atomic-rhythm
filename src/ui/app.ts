@@ -41,6 +41,7 @@ export class App {
   private formMode: FormMode = 'direct';
   private currentGenre: GenreSkeletonId = 'raw';
   private currentTimeSignature: TimeSignatureOption = '4/4';
+  private activePresetCategory: string = 'all';
   private atomsPerBar: number = 2;
   private orderStrategy: OrderStrategy = 'structural';
   private customOrder: number[] = [];
@@ -186,7 +187,14 @@ export class App {
           </div>
 
           <div class="input-block">
-            <label>Presets</label>
+            <label>Presets (${PRESETS.length})</label>
+            <div class="preset-filter-row" id="preset-filters">
+              <button class="preset-filter active" data-cat="all">All (${PRESETS.length})</button>
+              <button class="preset-filter" data-cat="atom">Atoms</button>
+              <button class="preset-filter" data-cat="inorganic">Inorganic</button>
+              <button class="preset-filter" data-cat="organic">Organic</button>
+              <button class="preset-filter" data-cat="bio">Bio</button>
+            </div>
             <div class="preset-list" id="preset-list"></div>
           </div>
         </section>
@@ -995,14 +1003,45 @@ export class App {
   }
 
   private renderPresets(root: HTMLElement): void {
+    const filterBtns = root.querySelectorAll('.preset-filter');
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const cat = (e.currentTarget as HTMLElement).dataset.cat || 'all';
+        this.activePresetCategory = cat;
+        filterBtns.forEach(b => b.classList.remove('active'));
+        (e.currentTarget as HTMLElement).classList.add('active');
+        this.renderPresetCards(root);
+      });
+    });
+
+    this.renderPresetCards(root);
+  }
+
+  private renderPresetCards(root: HTMLElement): void {
     const list = root.querySelector('#preset-list') as HTMLElement;
+    if (!list) return;
     list.innerHTML = '';
 
-    for (const preset of PRESETS) {
+    const filtered = this.activePresetCategory === 'all'
+      ? PRESETS
+      : PRESETS.filter(p => p.category === this.activePresetCategory);
+
+    const inputSmiles = root.querySelector('#input-smiles') as HTMLInputElement | null;
+    const currentSmilesVal = inputSmiles ? inputSmiles.value.trim() : 'c1ccccc1';
+
+    for (const preset of filtered) {
       const card = document.createElement('div');
-      card.className = `preset-card ${preset.smiles === 'c1ccccc1' ? 'active' : ''}`;
+      const isActive = preset.smiles === currentSmilesVal;
+      card.className = `preset-card ${isActive ? 'active' : ''}`;
+
+      const badgeClass = `preset-badge preset-badge-${preset.category || 'organic'}`;
+      const badgeLabel = preset.category ? preset.category.toUpperCase() : 'MOL';
+
       card.innerHTML = `
-        <div class="preset-name">${preset.name}</div>
+        <div class="preset-card-header">
+          <div class="preset-name">${preset.name}</div>
+          <span class="${badgeClass}">${badgeLabel}</span>
+        </div>
         <div class="preset-desc">${preset.description}</div>
       `;
 
@@ -1010,8 +1049,9 @@ export class App {
         root.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
 
-        const inputSmiles = root.querySelector('#input-smiles') as HTMLInputElement;
-        inputSmiles.value = preset.smiles;
+        if (inputSmiles) {
+          inputSmiles.value = preset.smiles;
+        }
 
         this.currentMolecule = parseSmiles(preset.smiles, preset.name);
         this.currentAnalysis = analyzeMolecule(this.currentMolecule);

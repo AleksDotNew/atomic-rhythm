@@ -227,5 +227,49 @@ describe('App interactive UI and Modulation Matrix', () => {
     meterSelect!.dispatchEvent(new Event('change'));
     expect(meterSelect?.value).toBe('adaptive');
   });
+
+  // @vitest-environment happy-dom
+  it('renders rich preset collection with categories and filters correctly', () => {
+    const root = document.createElement('div');
+    const app = new App();
+    app.mount(root);
+
+    // Filter buttons exist
+    const filters = root.querySelectorAll('.preset-filter');
+    expect(filters.length).toBe(5); // all, atom, inorganic, organic, bio
+
+    // Initial list has all presets (50 presets)
+    const initialCards = root.querySelectorAll('.preset-card');
+    expect(initialCards.length).toBe(50);
+
+    // Filter to inorganic
+    const inorgFilter = root.querySelector('.preset-filter[data-cat="inorganic"]') as HTMLButtonElement | null;
+    expect(inorgFilter).toBeTruthy();
+    inorgFilter?.click();
+
+    const inorgCards = root.querySelectorAll('.preset-card');
+    expect(inorgCards.length).toBe(21); // 21 inorganic presets
+    expect(inorgCards[0].textContent).toContain('INORGANIC');
+
+    // Click Sulfuric acid preset card
+    const h2so4Card = Array.from(inorgCards).find(c => c.textContent?.includes('Sulfuric Acid')) as HTMLElement | null;
+    expect(h2so4Card).toBeTruthy();
+    h2so4Card?.click();
+
+    const inputSmiles = root.querySelector('#input-smiles') as HTMLInputElement | null;
+    expect(inputSmiles?.value).toBe('OS(=O)(=O)O');
+
+    // Filter to bio
+    const bioFilter = root.querySelector('.preset-filter[data-cat="bio"]') as HTMLButtonElement | null;
+    bioFilter?.click();
+    const bioCards = root.querySelectorAll('.preset-card');
+    expect(bioCards.length).toBe(10);
+
+    // Click Aspirin
+    const aspirinCard = Array.from(bioCards).find(c => c.textContent?.includes('Aspirin')) as HTMLElement | null;
+    expect(aspirinCard).toBeTruthy();
+    aspirinCard?.click();
+    expect(inputSmiles?.value).toBe('CC(=O)Oc1ccccc1C(=O)O');
+  });
 });
 

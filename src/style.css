@@ -261,11 +261,42 @@ main.dashboard {
 }
 
 /* Molecule Selector Panel */
+.preset-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.preset-filter {
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-filter:hover {
+  color: var(--text-main);
+  border-color: var(--border-focus);
+}
+
+.preset-filter.active {
+  background: var(--accent-cyan);
+  color: #090d16;
+  font-weight: 700;
+  border-color: var(--accent-cyan);
+}
+
 .preset-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 280px;
+  max-height: 380px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -287,6 +318,42 @@ main.dashboard {
 .preset-card.active {
   border-color: var(--accent-cyan);
   background: rgba(56, 189, 248, 0.12);
+}
+
+.preset-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.preset-badge {
+  font-size: 0.62rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.preset-badge-atom {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+}
+
+.preset-badge-inorganic {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.preset-badge-organic {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+.preset-badge-bio {
+  background: rgba(236, 72, 153, 0.2);
+  color: #f472b6;
 }
 
 .preset-name {

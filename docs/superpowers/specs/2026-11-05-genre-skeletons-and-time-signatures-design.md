@@ -112,3 +112,4 @@ For each structural unit / bar $b$ corresponding to an atom:
   - Strudel export produces valid code with correct cycle divisions.
   - MIDI export produces valid SMF with time signature meta events.
 - UI tests for dropdown switching and BPM update.
+

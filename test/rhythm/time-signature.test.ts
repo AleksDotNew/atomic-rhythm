@@ -62,3 +62,4 @@ describe('Time Signature Engine', () => {
     expect(has58).toBe(true);
   });
 });
+
