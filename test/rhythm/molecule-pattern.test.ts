@@ -180,6 +180,40 @@ describe('buildMoleculePattern', () => {
     // 9 atoms with 5 per bar = 2 bars (ceil(9 / 5) = 2)
     expect(pat5.bars).toBe(2);
   });
+
+  it('builds patterns with DnB genre skeleton: backbeat snares and rolling hats', () => {
+    const benzene = parseSmiles('c1ccccc1');
+    const pat = buildMoleculePattern(benzene, {
+      mode: 'sequential',
+      genre: 'dnb',
+    });
+
+    const snareTrack = pat.tracks.find(t => t.voice.includes('electron') || t.voice === 'snare')!;
+    expect(snareTrack).toBeDefined();
+
+    // In 4/4 bar 0 (384 ticks), snare hits on step 4 (tick 96) and step 12 (tick 288)
+    const ticksInBar0 = snareTrack.events.filter(e => e.tick < 384).map(e => e.tick);
+    expect(ticksInBar0).toContain(96);
+    expect(ticksInBar0).toContain(288);
+
+    // Kick track has limited hits per bar (not 6 machine-gun hits!)
+    const kickTrack = pat.tracks.find(t => t.voice === 'proton')!;
+    const kickTicksBar0 = kickTrack.events.filter(e => e.tick < 384);
+    expect(kickTicksBar0.length).toBeLessThanOrEqual(3);
+  });
+
+  it('builds patterns with adaptive time signature: 5-ring cyclopentane plays in 5/8', () => {
+    const cyclopentane = parseSmiles('C1CCCC1');
+    const pat = buildMoleculePattern(cyclopentane, {
+      mode: 'sequential',
+      timeSignatureOption: 'adaptive',
+    });
+
+    // 5-ring -> 5/8 time signature (240 ticks per bar)
+    expect(pat.timeSignatures).toBeDefined();
+    expect(pat.timeSignatures![0]).toEqual([5, 8]);
+    expect(pat.barTicks![0]).toBe(240);
+  });
 });
 
 

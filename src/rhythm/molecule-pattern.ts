@@ -3,10 +3,12 @@ import { Molecule } from '../chem/molecule';
 import { SynthVoiceName } from '../audio/synth';
 import { buildAtomPattern } from './atom-pattern';
 import { applyExcitationToAtom } from './excitation';
+import { applyGenreSkeleton, GenreSkeletonId } from './genre-skeletons';
 import { createPattern, Pattern, PPQ, RhythmEvent, Track } from './ir';
 import { DEFAULT_MOD_MATRIX, ModulationMatrix } from './modmatrix';
 import { buildMotifTracks } from './motifs';
 import { adjustPanForVoice } from './panning';
+import { resolveBarMeters, TimeSignatureOption } from './time-signature';
 
 export type PlaybackMode = 'sequential' | 'overlay';
 export type FormMode = 'direct' | 'assembly';
@@ -20,6 +22,8 @@ export interface MoleculePatternOptions {
   readonly orderStrategy?: OrderStrategy;
   readonly customOrder?: readonly number[];
   readonly atomPans?: readonly number[];
+  readonly genre?: GenreSkeletonId;
+  readonly timeSignatureOption?: TimeSignatureOption;
 }
 
 export function buildMoleculePattern(
@@ -33,6 +37,8 @@ export function buildMoleculePattern(
   const overrides = options.atomVoiceOverrides ?? {};
   const orderStrategy = options.orderStrategy ?? 'structural';
   const customOrder = options.customOrder;
+  const genre = options.genre ?? 'raw';
+  const timeSignatureOption = options.timeSignatureOption ?? '4/4';
 
   if (mol.atoms.length === 0) {
     return createPattern(1, []);
@@ -40,7 +46,6 @@ export function buildMoleculePattern(
 
   const analysis = analyzeMolecule(mol);
   const keyNodes = findKeyNodalAtoms(mol, analysis);
-  const oneBarTicks = 16 * (PPQ / 4); // 384 ticks
 
   const trackMap = new Map<string, { cycleTicks: number; events: RhythmEvent[] }>();
 
@@ -77,7 +82,12 @@ export function buildMoleculePattern(
     if (orderStrategy === 'structural' && hasHeavyAtoms && analysis.structuralUnits.length > 0) {
       // Structural Units / Ring Cycle Mode (e.g. cyclopentane 5-part cycle)
       const totalBars = Math.max(1, analysis.structuralUnits.length);
-      const fullCycleTicks = totalBars * oneBarTicks;
+      const barMeters = resolveBarMeters(mol, analysis, timeSignatureOption, totalBars);
+      const barStartTicks: number[] = [0];
+      for (let b = 0; b < totalBars; b++) {
+        barStartTicks.push(barStartTicks[b] + barMeters[b].ticks);
+      }
+      const fullCycleTicks = barStartTicks[totalBars];
 
       // Downbeat crash accent at start of molecular cycle
       addEvent('crash', fullCycleTicks, {
@@ -88,7 +98,9 @@ export function buildMoleculePattern(
 
       for (let unitIdx = 0; unitIdx < analysis.structuralUnits.length; unitIdx++) {
         const unit = analysis.structuralUnits[unitIdx];
-        const barStartTick = unitIdx * oneBarTicks;
+        const meter = barMeters[unitIdx];
+        const barTicks = meter.ticks;
+        const barStartTick = barStartTicks[unitIdx];
         const currentBar = unitIdx + 1;
         const heavyIdx = unit.heavyAtomIndex;
 
@@ -118,12 +130,15 @@ export function buildMoleculePattern(
           const pBondCount = analysis.atomBondCounts[pIdx];
           const pBondWeight = analysis.atomBondWeights[pIdx];
 
-          let pTracks = buildAtomPattern(pAtom, matrix, pIdx, oneBarTicks, pBondCount, pBondWeight);
+          let pTracks = buildAtomPattern(pAtom, matrix, pIdx, barTicks, pBondCount, pBondWeight);
           pTracks = applyExcitationToAtom(pAtom, pTracks, temperature, currentBar);
+          if (genre !== 'raw') {
+            pTracks = pTracks.filter(t => t.voice !== 'proton');
+          }
 
           for (const track of pTracks) {
             for (const evt of track.events) {
-              const offsetTick = p > 0 ? (p * 24) % oneBarTicks : 0;
+              const offsetTick = p > 0 ? (p * 24) % barTicks : 0;
               addEvent(track.voice, fullCycleTicks, {
                 ...evt,
                 tick: (barStartTick + evt.tick + offsetTick) % fullCycleTicks,
@@ -137,8 +152,9 @@ export function buildMoleculePattern(
         const heavyBondCount = analysis.atomBondCounts[heavyIdx];
         const heavyBondWeight = analysis.atomBondWeights[heavyIdx];
 
-        let heavyTracks = buildAtomPattern(heavyAtom, matrix, heavyIdx, oneBarTicks, heavyBondCount, heavyBondWeight);
+        let heavyTracks = buildAtomPattern(heavyAtom, matrix, heavyIdx, barTicks, heavyBondCount, heavyBondWeight);
         heavyTracks = applyExcitationToAtom(heavyAtom, heavyTracks, temperature, currentBar);
+        heavyTracks = applyGenreSkeleton(heavyTracks, heavyAtom, genre, meter, unitIdx);
 
         for (const track of heavyTracks) {
           for (const evt of track.events) {
@@ -151,7 +167,7 @@ export function buildMoleculePattern(
 
         // 3. Outgoing bond articulation at the end of the bar (transition into next part)
         if (unit.outgoingBond) {
-          const boundaryTick = (barStartTick + oneBarTicks - 24) % fullCycleTicks;
+          const boundaryTick = (barStartTick + barTicks - 24) % fullCycleTicks;
           let articulation: RhythmEvent['articulation'] = 'normal';
           let velocity = 0.8;
 
@@ -187,13 +203,22 @@ export function buildMoleculePattern(
         events: data.events,
       }));
 
-      return createPattern(totalBars, tracks);
+      const primaryTs: [number, number] = [barMeters[0].numerator, barMeters[0].denominator];
+      const timeSignatures: [number, number][] = barMeters.map(m => [m.numerator, m.denominator]);
+      const barTickList: number[] = barMeters.map(m => m.ticks);
+
+      return createPattern(totalBars, tracks, primaryTs, timeSignatures, barTickList);
     } else {
       // Ordered sequence mode (custom, bondWeight, mass, or fallback for all-H)
       const sequence = computeOrderedSequence(mol, analysis, orderStrategy, customOrder);
       const apb = Math.max(1, atomsPerBar);
       const totalBars = Math.max(1, Math.ceil(sequence.length / apb));
-      const fullCycleTicks = totalBars * oneBarTicks;
+      const barMeters = resolveBarMeters(mol, analysis, timeSignatureOption, totalBars);
+      const barStartTicks: number[] = [0];
+      for (let b = 0; b < totalBars; b++) {
+        barStartTicks.push(barStartTicks[b] + barMeters[b].ticks);
+      }
+      const fullCycleTicks = barStartTicks[totalBars];
 
       // Downbeat crash accent at start of molecular cycle
       addEvent('crash', fullCycleTicks, {
@@ -207,10 +232,14 @@ export function buildMoleculePattern(
         const atom = mol.atoms[atomIdx];
         const bondCount = analysis.atomBondCounts[atomIdx];
         const bondWeight = analysis.atomBondWeights[atomIdx];
-        const segmentStartTick = Math.round((seqIdx * oneBarTicks) / apb);
-        const nextSegmentStartTick = Math.round(((seqIdx + 1) * oneBarTicks) / apb);
+        const barIndex = Math.min(totalBars - 1, Math.floor(seqIdx / apb));
+        const meter = barMeters[barIndex];
+        const barTicks = meter.ticks;
+        const currentBar = barIndex + 1;
+        const subIdx = seqIdx % apb;
+        const segmentStartTick = barStartTicks[barIndex] + Math.round((subIdx * barTicks) / apb);
+        const nextSegmentStartTick = barStartTicks[barIndex] + Math.round(((subIdx + 1) * barTicks) / apb);
         const segmentTicks = Math.max(1, nextSegmentStartTick - segmentStartTick);
-        const currentBar = Math.floor(segmentStartTick / oneBarTicks) + 1;
 
         // Accent nodal / weighted moments
         if (keyNodes.bridgeheads.includes(atomIdx)) {
@@ -233,6 +262,9 @@ export function buildMoleculePattern(
 
         let atomTracks = buildAtomPattern(atom, matrix, atomIdx, segmentTicks, bondCount, bondWeight);
         atomTracks = applyExcitationToAtom(atom, atomTracks, temperature, currentBar);
+        if (genre !== 'raw') {
+          atomTracks = applyGenreSkeleton(atomTracks, atom, genre, meter, barIndex);
+        }
 
         for (const track of atomTracks) {
           for (const evt of track.events) {
@@ -243,16 +275,16 @@ export function buildMoleculePattern(
           }
         }
 
-        if (seqIdx < sequence.length - 1) {
-          const nextAtomIdx = sequence[seqIdx + 1];
+        // Outgoing bond articulation at segment boundary
+        const nextIdx = sequence[(seqIdx + 1) % sequence.length];
+        if (nextIdx !== undefined) {
           const bond = mol.bonds.find(
-            b => (b.atomA === atomIdx && b.atomB === nextAtomIdx) || (b.atomA === nextAtomIdx && b.atomB === atomIdx)
+            b => (b.atomA === atomIdx && b.atomB === nextIdx) || (b.atomA === nextIdx && b.atomB === atomIdx)
           );
-
           if (bond) {
-            const boundaryTick = nextSegmentStartTick % fullCycleTicks;
+            const boundaryTick = (segmentStartTick + segmentTicks - 12) % fullCycleTicks;
             let articulation: RhythmEvent['articulation'] = 'normal';
-            let velocity = 0.8;
+            let velocity = 0.7;
 
             if (bond.order === 2) {
               articulation = 'flam';
@@ -286,12 +318,18 @@ export function buildMoleculePattern(
         events: data.events,
       }));
 
-      return createPattern(totalBars, tracks);
+      const primaryTs: [number, number] = [barMeters[0].numerator, barMeters[0].denominator];
+      const timeSignatures: [number, number][] = barMeters.map(m => [m.numerator, m.denominator]);
+      const barTickList: number[] = barMeters.map(m => m.ticks);
+
+      return createPattern(totalBars, tracks, primaryTs, timeSignatures, barTickList);
     }
   } else {
     // Overlay Mode: all atoms play concurrently on 1 bar
     const totalBars = 1;
-    const fullCycleTicks = oneBarTicks;
+    const barMeters = resolveBarMeters(mol, analysis, timeSignatureOption, 1);
+    const meter = barMeters[0];
+    const fullCycleTicks = meter.ticks;
 
     // Downbeat crash accent
     addEvent('crash', fullCycleTicks, {
@@ -316,6 +354,9 @@ export function buildMoleculePattern(
 
       let atomTracks = buildAtomPattern(atom, matrix, atomIdx, fullCycleTicks, bondCount, bondWeight);
       atomTracks = applyExcitationToAtom(atom, atomTracks, temperature, 1);
+      if (genre !== 'raw') {
+        atomTracks = applyGenreSkeleton(atomTracks, atom, genre, meter, 0);
+      }
 
       for (const track of atomTracks) {
         for (const evt of track.events) {
@@ -337,6 +378,7 @@ export function buildMoleculePattern(
       events: data.events,
     }));
 
-    return createPattern(totalBars, tracks);
+    const primaryTs: [number, number] = [meter.numerator, meter.denominator];
+    return createPattern(1, tracks, primaryTs, [primaryTs], [meter.ticks]);
   }
 }
