@@ -123,4 +123,30 @@ describe('Exporters', () => {
     // Format 1 or 0
     expect(bytes.length).toBeGreaterThan(14);
   });
+
+  it('exports Strudel code with setcps tempo declaration when bpm option is provided', () => {
+    const methane = parseSmiles('C');
+    const pat = buildMoleculePattern(methane);
+    const code = exportToStrudel(pat, { bpm: 174 });
+
+    // setcps(174 / 60 / 4 = 0.725)
+    expect(code).toContain('setcps(');
+    expect(code).toContain('0.725');
+  });
+
+  it('writes MIDI Time Signature Meta Events into Track 0', () => {
+    const cyclopentane = parseSmiles('C1CCCC1');
+    const pat = buildMoleculePattern(cyclopentane, { timeSignatureOption: 'adaptive' });
+    const bytes = exportToMidi(pat, 120);
+
+    // Check for Meta Event FF 58 04 (Time Signature)
+    let foundTimeSig = false;
+    for (let i = 0; i < bytes.length - 4; i++) {
+      if (bytes[i] === 0xFF && bytes[i + 1] === 0x58 && bytes[i + 2] === 0x04) {
+        foundTimeSig = true;
+        break;
+      }
+    }
+    expect(foundTimeSig).toBe(true);
+  });
 });

@@ -62,6 +62,44 @@ export function exportToMidi(
     (usPerBeat >> 8) & 0xff,
     usPerBeat & 0xff
   );
+
+  const writeTimeSigEvent = (delta: number, num: number, den: number): number[] => {
+    const denPower = Math.round(Math.log2(den || 4));
+    return [
+      ...writeVlq(delta),
+      0xff, 0x58, 0x04,
+      num & 0xff,
+      denPower & 0xff,
+      24, // MIDI clocks per metronome click
+      8,  // 32nd notes per 24 MIDI clocks
+    ];
+  };
+
+  // Write Time Signature Events
+  if (pattern.timeSignatures && pattern.timeSignatures.length > 0) {
+    // Initial Time Signature at delta 0
+    const firstTs = pattern.timeSignatures[0];
+    tempoTrackData.push(...writeTimeSigEvent(0, firstTs[0], firstTs[1]));
+
+    let lastTick = 0;
+    let currentTick = 0;
+
+    for (let b = 1; b < pattern.timeSignatures.length; b++) {
+      currentTick += pattern.barTicks ? pattern.barTicks[b - 1] : 384;
+      const prevTs = pattern.timeSignatures[b - 1];
+      const curTs = pattern.timeSignatures[b];
+
+      if (curTs[0] !== prevTs[0] || curTs[1] !== prevTs[1]) {
+        const delta = currentTick - lastTick;
+        tempoTrackData.push(...writeTimeSigEvent(delta, curTs[0], curTs[1]));
+        lastTick = currentTick;
+      }
+    }
+  } else {
+    const ts = pattern.timeSignature || [4, 4];
+    tempoTrackData.push(...writeTimeSigEvent(0, ts[0], ts[1]));
+  }
+
   // End of Track event
   tempoTrackData.push(...writeVlq(0), 0xff, 0x2f, 0x00);
 

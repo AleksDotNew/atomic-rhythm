@@ -18,6 +18,7 @@ export interface StrudelExportOptions {
   readonly voiceMap?: Record<string, string>;
   readonly samplesDeclaration?: string;
   readonly compact?: boolean;
+  readonly bpm?: number;
 }
 
 export function getStrudelToken(voice: string, customMap?: Record<string, string>): string {
@@ -207,19 +208,22 @@ export function exportToStrudel(
   let voiceMap: Record<string, string> | undefined;
   let samplesDeclaration: string | undefined;
   let compact = true;
+  let bpm: number | undefined;
 
   if (options) {
-    if ('samplesDeclaration' in options || 'compact' in options || 'voiceMap' in options) {
+    if ('samplesDeclaration' in options || 'compact' in options || 'voiceMap' in options || 'bpm' in options) {
       const opts = options as StrudelExportOptions;
       voiceMap = opts.voiceMap;
       samplesDeclaration = opts.samplesDeclaration;
+      bpm = opts.bpm;
       if (opts.compact !== undefined) compact = opts.compact;
     } else {
       voiceMap = options as Record<string, string>;
     }
   }
 
-  const barTicks = 16 * (PPQ / 4); // 384
+  const stepTicks = PPQ / 4; // 24 ticks
+  const barTicks = pattern.barTicks ? pattern.barTicks[0] : 16 * stepTicks; // default 384
   const lines: string[] = [];
 
   for (const track of pattern.tracks) {
@@ -227,7 +231,6 @@ export function exportToStrudel(
     const token = getStrudelToken(track.voice, voiceMap);
 
     // Group events into 16th-note steps of the cycle
-    const stepTicks = PPQ / 4; // 24 ticks
     const stepCount = Math.max(1, Math.round(track.cycleTicks / stepTicks));
     const stepGrid: string[] = new Array(stepCount).fill('~');
 
@@ -236,16 +239,25 @@ export function exportToStrudel(
       stepGrid[stepIdx] = token;
     }
 
-    const stepsPerBar = 16;
-    const numBars = Math.round(track.cycleTicks / barTicks);
+    const numBars = pattern.barTicks ? pattern.barTicks.length : Math.round(track.cycleTicks / barTicks);
     let trackExpr: string;
     let isFoldedToOneBar = false;
 
     // Multi-bar pattern analysis (e.g. 6-bar benzene, 5-bar cyclopentane)
-    if (compact && track.cycleTicks % barTicks === 0 && numBars > 1) {
+    if (compact && numBars > 1) {
       const barChunks: string[][] = [];
-      for (let b = 0; b < numBars; b++) {
-        barChunks.push(stepGrid.slice(b * stepsPerBar, (b + 1) * stepsPerBar));
+      if (pattern.barTicks && pattern.barTicks.length > 1) {
+        let curStep = 0;
+        for (let b = 0; b < pattern.barTicks.length; b++) {
+          const bSteps = Math.round(pattern.barTicks[b] / stepTicks);
+          barChunks.push(stepGrid.slice(curStep, curStep + bSteps));
+          curStep += bSteps;
+        }
+      } else {
+        const stepsPerBar = pattern.barTicks ? Math.round(pattern.barTicks[0] / stepTicks) : 16;
+        for (let b = 0; b < numBars; b++) {
+          barChunks.push(stepGrid.slice(b * stepsPerBar, (b + 1) * stepsPerBar));
+        }
       }
 
       const firstBar = barChunks[0];
@@ -279,7 +291,7 @@ export function exportToStrudel(
       const miniNotation = compact ? compactMiniNotation(stepGrid, token) : stepGrid.join(' ');
       trackExpr = `s("${miniNotation}")`;
 
-      // Polymetric ratio if cycle length differs from 1 bar (384 ticks)
+      // Polymetric ratio if cycle length differs from 1 bar
       if (track.cycleTicks !== barTicks) {
         const ratio = +(track.cycleTicks / barTicks).toFixed(3);
         trackExpr += `.slow(${ratio})`;
@@ -295,17 +307,19 @@ export function exportToStrudel(
     lines.push(`  ${trackExpr}`);
   }
 
+  let prefix = '';
+  if (bpm) {
+    prefix += `setcps(${(bpm / 60 / 4).toFixed(3)})\n\n`;
+  }
+  if (samplesDeclaration && samplesDeclaration.trim().length > 0) {
+    prefix += `${samplesDeclaration.trim()}\n\n`;
+  }
+
   if (lines.length === 0) {
     const emptyPattern = '// Empty Atomic Rhythm Pattern\ns("~")';
-    if (samplesDeclaration && samplesDeclaration.trim().length > 0) {
-      return `${samplesDeclaration.trim()}\n\n${emptyPattern}`;
-    }
-    return emptyPattern;
+    return prefix ? `${prefix}${emptyPattern}` : emptyPattern;
   }
 
   const stackCode = `// Atomic Rhythm pattern (${pattern.bars} bar(s))\nstack(\n${lines.join(',\n')}\n)`;
-  if (samplesDeclaration && samplesDeclaration.trim().length > 0) {
-    return `${samplesDeclaration.trim()}\n\n${stackCode}`;
-  }
-  return stackCode;
+  return prefix ? `${prefix}${stackCode}` : stackCode;
 }
