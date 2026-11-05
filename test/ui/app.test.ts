@@ -238,9 +238,9 @@ describe('App interactive UI and Modulation Matrix', () => {
     const filters = root.querySelectorAll('.preset-filter');
     expect(filters.length).toBe(5); // all, atom, inorganic, organic, bio
 
-    // Initial list has all presets (50 presets)
+    // Initial list has all presets (66 presets)
     const initialCards = root.querySelectorAll('.preset-card');
-    expect(initialCards.length).toBe(50);
+    expect(initialCards.length).toBe(66);
 
     // Filter to inorganic
     const inorgFilter = root.querySelector('.preset-filter[data-cat="inorganic"]') as HTMLButtonElement | null;
@@ -248,7 +248,7 @@ describe('App interactive UI and Modulation Matrix', () => {
     inorgFilter?.click();
 
     const inorgCards = root.querySelectorAll('.preset-card');
-    expect(inorgCards.length).toBe(21); // 21 inorganic presets
+    expect(inorgCards.length).toBe(23); // 23 inorganic presets
     expect(inorgCards[0].textContent).toContain('INORGANIC');
 
     // Click Sulfuric acid preset card
@@ -263,13 +263,19 @@ describe('App interactive UI and Modulation Matrix', () => {
     const bioFilter = root.querySelector('.preset-filter[data-cat="bio"]') as HTMLButtonElement | null;
     bioFilter?.click();
     const bioCards = root.querySelectorAll('.preset-card');
-    expect(bioCards.length).toBe(10);
+    expect(bioCards.length).toBe(17);
 
     // Click Aspirin
     const aspirinCard = Array.from(bioCards).find(c => c.textContent?.includes('Aspirin')) as HTMLElement | null;
     expect(aspirinCard).toBeTruthy();
     aspirinCard?.click();
     expect(inputSmiles?.value).toBe('CC(=O)Oc1ccccc1C(=O)O');
+
+    // Click Adrenaline from MolDraw guide
+    const adrenalineCard = Array.from(bioCards).find(c => c.textContent?.includes('Adrenaline')) as HTMLElement | null;
+    expect(adrenalineCard).toBeTruthy();
+    adrenalineCard?.click();
+    expect(inputSmiles?.value).toContain('CNC[C@@H]');
   });
 });
 

@@ -104,6 +104,23 @@ describe('parseSmiles', () => {
       { name: 'Dopamine', smiles: 'NCCc1ccc(O)c(O)c1' },
       { name: 'Serotonin', smiles: 'NCCc1c[nH]c2ccc(O)cc12' },
       { name: 'Ascorbic Acid (Vitamin C)', smiles: 'OCC(O)C1OC(=O)C(O)=C1O' },
+      // MolDraw specific molecules
+      { name: 'Adrenaline', smiles: 'CNC[C@@H](C1=CC(=C(C=C1)O)O)O' },
+      { name: 'Cholesterol', smiles: 'C[C@H](CCCC(C)C)[C@H]1CC[C@@H]2[C@@]1(CC[C@H]3[C@H]2CC=C4[C@@]3(CC[C@@H](C4)O)C)C' },
+      { name: 'Citric Acid', smiles: 'C(C(=O)O)C(CC(=O)O)(C(=O)O)O' },
+      { name: 'Ibuprofen', smiles: 'CC(C)Cc1ccc(cc1)C(C)C(=O)O' },
+      { name: 'L-Alanine', smiles: 'C[C@@H](C(=O)O)N' },
+      { name: 'Methanol', smiles: 'CO' },
+      { name: 'Phenol', smiles: 'Oc1ccccc1' },
+      { name: 'Sucrose', smiles: 'C([C@@H]1[C@H]([C@@H]([C@H]([C@H](O1)O[C@]2([C@H]([C@@H]([C@H](O2)CO)O)O)CO)O)O)O)O' },
+      { name: 'Toluene', smiles: 'Cc1ccccc1' },
+      { name: 'Vanillin', smiles: 'COC1=C(C=CC(=C1)C=O)O' },
+      { name: 'Cyclopropane', smiles: 'C1CC1' },
+      { name: 'Pyrrole', smiles: 'c1cc[nH]c1' },
+      { name: 'Hydrogen Cyanide', smiles: 'C#N' },
+      { name: 'Ammonium Chloride', smiles: '[NH4+].[Cl-]' },
+      { name: 'Isobutane', smiles: 'CC(C)C' },
+      { name: 'Chloromethane', smiles: 'CCl' },
     ];
 
     for (const c of candidates) {

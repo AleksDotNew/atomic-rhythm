@@ -62,6 +62,12 @@ export function parseSmiles(smiles: string, name?: string): Molecule {
       continue;
     }
 
+    // Directional stereochemistry markers / and \ (ignored in 2D topology)
+    if (ch === '/' || ch === '\\') {
+      i++;
+      continue;
+    }
+
     // Bond symbols
     if (ch === '-' || ch === '=' || ch === '#' || ch === ':') {
       const order = ch === '=' ? 2 : ch === '#' ? 3 : 1;
@@ -245,10 +251,12 @@ export function parseSmiles(smiles: string, name?: string): Molecule {
 }
 
 function parseBracketAtom(text: string, pos: number): ParsedAtomNode {
+  // Strip stereochemistry markers (@, @@) inside brackets
+  const cleaned = text.replace(/@+/g, '');
   // Pattern: [isotope? symbol H? count? charge?]
-  // Example: 13C, 2H, Na+, Cl-, NH4+, Fe+3
+  // Example: 13C, 2H, Na+, Cl-, NH4+, Fe+3, C@@H -> CH, nH
   const regex = /^(\d+)?([A-Za-z][a-z]?)(?:H(\d+)?)?([+-]\d*|\d+[+-])?$/;
-  const match = text.match(regex);
+  const match = cleaned.match(regex);
   if (!match) {
     throw new SmilesError(`Invalid bracket atom content "[${text}]"`, pos);
   }
