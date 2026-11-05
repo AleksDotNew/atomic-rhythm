@@ -88,6 +88,28 @@ describe('Exporters', () => {
     expect(code).not.toContain('sd ~!2 sd ~!2 sd ~!2 sd ~!6 sd ~!2');
   });
 
+  it('compresses repeated cycle elements inside <...> and formats per-bar stereo panning', () => {
+    // Caffeine / multi-bar heterocyclic molecule with stereo panning
+    const caffeine = parseSmiles('CN1C=NC2=C1C(=O)N(C(=O)N2C)C');
+    const pans = caffeine.atoms.map((_, i) => (i % 2 === 0 ? -0.6 : 0.6));
+    const pat = buildMoleculePattern(caffeine, {
+      mode: 'sequential',
+      atomPans: pans,
+    });
+    const code = exportToStrudel(pat, { compact: true });
+
+    // 1. Crash and sparse tracks should use compressed rests like ~!N
+    expect(code).toMatch(/s\("<.*cr.*>"\)/);
+    expect(code).toContain('~!9');
+    expect(code).toContain('~!13');
+
+    // 2. No long consecutive spaces of identical elements inside <...>
+    expect(code).not.toMatch(/~ ~ ~ ~ ~/);
+
+    // 3. Kick/centered voices should not dump giant walls of 50+ pan numbers
+    expect(code).not.toMatch(/\.pan\("<(?:[0-9.]+\s+){20,}/);
+  });
+
   it('generates valid Standard MIDI File bytes (MThd, MTrk headers)', () => {
     const h2 = parseSmiles('[H][H]');
     const pat = buildMoleculePattern(h2);

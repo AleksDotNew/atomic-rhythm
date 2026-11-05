@@ -90,6 +90,92 @@ function compressSubpatterns(parts: string[]): string[] {
   return result;
 }
 
+function compressCycleElements(elements: string[]): string {
+  const parts: string[] = [];
+  let i = 0;
+  while (i < elements.length) {
+    const cur = elements[i];
+    let count = 1;
+    while (i + count < elements.length && elements[i + count] === cur) {
+      count++;
+    }
+    if (count > 1) {
+      parts.push(`${cur}!${count}`);
+    } else {
+      parts.push(cur);
+    }
+    i += count;
+  }
+  return parts.join(' ');
+}
+
+function formatTrackPan(
+  track: Track,
+  numBars: number,
+  barTicks: number,
+  isFoldedToOneBar: boolean
+): string | null {
+  const eventsWithPan = track.events.filter(e => e.pan !== undefined);
+  if (eventsWithPan.length === 0) return null;
+
+  const toStrudelPan = (p: number) => +((p + 1) / 2).toFixed(2);
+
+  // If all events are virtually centered (within 0.06 of 0.0 in -1..1, i.e. 0.47..0.53 in Strudel),
+  // omit .pan() since 0.5 is already the default center pan in Strudel/audio
+  const allCentered = eventsWithPan.every(e => Math.abs(e.pan!) <= 0.06);
+  if (allCentered) return null;
+
+  const pans = eventsWithPan.map(e => e.pan!);
+  const minPan = Math.min(...pans);
+  const maxPan = Math.max(...pans);
+
+  // If track has uniform panning across all events or folded to 1 bar
+  if (maxPan - minPan <= 0.04 || isFoldedToOneBar) {
+    const avgPan = toStrudelPan(pans.reduce((a, b) => a + b, 0) / pans.length);
+    if (Math.abs(avgPan - 0.5) <= 0.04) return null;
+    return `.pan(${avgPan})`;
+  }
+
+  // Multi-bar track: calculate exactly 1 pan per bar (matching Strudel cycle step)
+  if (numBars > 1 && track.cycleTicks % barTicks === 0) {
+    const barPans: string[] = [];
+    let lastKnownPan = toStrudelPan(pans[0]);
+
+    for (let b = 0; b < numBars; b++) {
+      const barStart = b * barTicks;
+      const barEnd = (b + 1) * barTicks;
+      const barEvents = track.events.filter(
+        e => e.tick >= barStart && e.tick < barEnd && e.pan !== undefined
+      );
+
+      if (barEvents.length > 0) {
+        const avg = barEvents.reduce((sum, e) => sum + e.pan!, 0) / barEvents.length;
+        lastKnownPan = toStrudelPan(avg);
+        barPans.push(lastKnownPan.toString());
+      } else {
+        barPans.push(lastKnownPan.toString());
+      }
+    }
+
+    const compressed = compressCycleElements(barPans);
+    if (!compressed.includes(' ')) {
+      const single = compressed.split('!')[0];
+      if (Math.abs(+single - 0.5) <= 0.04) return null;
+      return `.pan(${single})`;
+    }
+    return `.pan("<${compressed}>")`;
+  }
+
+  // Polymetric track fallback
+  const distinctPans = Array.from(new Set(pans.map(toStrudelPan)));
+  if (distinctPans.length === 1) {
+    if (Math.abs(distinctPans[0] - 0.5) <= 0.04) return null;
+    return `.pan(${distinctPans[0]})`;
+  }
+  const panStrings = pans.map(p => toStrudelPan(p).toString());
+  return `.pan("<${compressCycleElements(panStrings)}>")`;
+}
+
 function compactMiniNotation(stepGrid: string[], token: string): string {
   const n = stepGrid.length;
   if (n === 0) return '~';
@@ -153,6 +239,7 @@ export function exportToStrudel(
     const stepsPerBar = 16;
     const numBars = Math.round(track.cycleTicks / barTicks);
     let trackExpr: string;
+    let isFoldedToOneBar = false;
 
     // Multi-bar pattern analysis (e.g. 6-bar benzene, 5-bar cyclopentane)
     if (compact && track.cycleTicks % barTicks === 0 && numBars > 1) {
@@ -168,6 +255,7 @@ export function exportToStrudel(
 
       if (allBarsIdentical) {
         // Every bar has the identical rhythm; fold into 1 standard cycle without .slow()
+        isFoldedToOneBar = true;
         const miniNotation = compactMiniNotation(firstBar, token);
         trackExpr = `s("${miniNotation}")`;
       } else {
@@ -184,7 +272,8 @@ export function exportToStrudel(
           return compacted;
         });
 
-        trackExpr = `s("<${barStrings.join(' ')}>")`;
+        const compressedCycle = compressCycleElements(barStrings);
+        trackExpr = `s("<${compressedCycle}>")`;
       }
     } else {
       const miniNotation = compact ? compactMiniNotation(stepGrid, token) : stepGrid.join(' ');
@@ -198,16 +287,9 @@ export function exportToStrudel(
     }
 
     // Attach stereo panning if events have pan values (converted to Strudel 0..1 range)
-    const eventsWithPan = track.events.filter(e => e.pan !== undefined);
-    if (eventsWithPan.length > 0) {
-      const distinctPans = Array.from(new Set(eventsWithPan.map(e => e.pan!)));
-      if (distinctPans.length === 1) {
-        const strudelPan = +((distinctPans[0] + 1) / 2).toFixed(2);
-        trackExpr += `.pan(${strudelPan})`;
-      } else {
-        const panSteps = eventsWithPan.map(e => +((e.pan! + 1) / 2).toFixed(2));
-        trackExpr += `.pan("<${panSteps.join(' ')}>")`;
-      }
+    const panModifier = formatTrackPan(track, numBars, barTicks, isFoldedToOneBar);
+    if (panModifier) {
+      trackExpr += panModifier;
     }
 
     lines.push(`  ${trackExpr}`);
