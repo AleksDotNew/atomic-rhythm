@@ -55,12 +55,12 @@ stack(
     .delay(0.4).delaytime(2/16)
     .gain(0.72),
 
-  // 7. Бензольное кольцо (6 зубцов, вращение с дифференциалом)
-  s("<metal:2(6,16) metal:2(6,16,2) metal:2(6,16,4) metal:2(6,16,1) metal:2(6,16,3)>")
-    .hpf(900).lpf(3600)
+  // 7. Бензольное кольцо (6 зубцов: мягкий полый резонатор can:1)
+  s("<can:1(6,16) can:1(6,16,2) can:1(6,16,4) can:1(6,16,1) can:1(6,16,3)>")
+    .hpf(500).lpf(2200)
     .pan(0.8)
-    .delay(0.4).delaytime(3/16)
-    .gain(0.56),
+    .delay(0.35).delaytime(3/16).delayfeedback(0.4)
+    .gain(0.52),
 
   // 8. Искры соприкосновения зубцов (Collision Engine)
   s("<industrial:4(11,16) industrial:4(11,16,3) industrial:4(11,16,6) industrial:4(11,16,2)>")
