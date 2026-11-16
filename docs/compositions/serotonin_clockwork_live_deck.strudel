@@ -1,0 +1,111 @@
+// ============================================================================
+// SEROTONIN (LIVE PERFORMANCE DECK) — CLOCKWORK GEAR TRANCE (138 BPM)
+// New Harmony & Melody: F# Minor / F# Dorian (F#m9 - Dmaj7#11 - Bm9 - C#m7)
+// Immediate jam session version: all instruments active in full euphoria!
+// ============================================================================
+
+setcps(138 / 60 / 4)
+samples('github:tidalcycles/dirt-samples')
+
+stack(
+  // 1. Углеродный маховик (4-on-the-floor кик)
+  s("bd:4*4")
+    .gain(0.95),
+
+  // 2. K-B-B-B Rolling Trance Bass в F# Minor (<f#1 d1 b0 c#1>)
+  s("[~ saw*3]*4")
+    .note("<f#1!4 d1!4 b0!4 c#1!4>")
+    .decay(0.13).sustain(0.04)
+    .lpf(slider(3400, 400, 8000, 50))
+    .lpq(slider(3.5, 1, 10, 0.1))
+    .distort(slider(0.3, 0, 0.8, 0.02))
+    .pan(0.5)
+    .gain(slider(0.88, 0, 1.2, 0.02)),
+
+  // 3. Саб-бас сердечника (46 Гц F#)
+  s("sine*4")
+    .note("<f#1!4 d1!4 b0!4 c#1!4>")
+    .decay(0.22).sustain(0.18)
+    .lpf(95)
+    .gain(0.92),
+
+  // 4. Открытый трансовый хэт на слабую долю
+  s("[~ oh]*4")
+    .hpf(1800)
+    .gain(0.72),
+
+  // 5A. 4 Тика храповика слева
+  s("hh*4")
+    .hpf(4000)
+    .pan(0.25)
+    .gain(0.48),
+
+  // 5B. Эмерджентное облако электронов (3/16 эхо справа)
+  s("click*4")
+    .hpf(4500)
+    .crush(6)
+    .delay(0.75).delaytime(3/16).delayfeedback(slider(0.68, 0.1, 0.88, 0.01))
+    .pan(0.75)
+    .gain(0.46),
+
+  // 6. Пиррольное кольцо (5 зубцов, вращение 0..4)
+  s("<rim(5,16) rim(5,16,1) rim(5,16,2) rim(5,16,3) rim(5,16,4)>")
+    .hpf(700)
+    .pan(0.2)
+    .delay(0.4).delaytime(2/16)
+    .gain(0.72),
+
+  // 7. Бензольное кольцо (6 зубцов, вращение с дифференциалом)
+  s("<metal:2(6,16) metal:2(6,16,2) metal:2(6,16,4) metal:2(6,16,1) metal:2(6,16,3)>")
+    .hpf(900).lpf(3600)
+    .pan(0.8)
+    .delay(0.4).delaytime(3/16)
+    .gain(0.56),
+
+  // 8. Искры соприкосновения зубцов (Collision Engine)
+  s("<industrial:4(11,16) industrial:4(11,16,3) industrial:4(11,16,6) industrial:4(11,16,2)>")
+    .hpf(1200)
+    .crush(5)
+    .distort(0.32)
+    .pan(rand)
+    .gain(slider(0.58, 0, 0.9, 0.02)),
+
+  // 9. Полное 16-дольное каскадное арпеджио в F# Minor (4 эволюционирующих контура)
+  s("triangle*2")
+    .note("<[0 4 7 11 2 6 9 12 4 7 11 14 7 11 14 16] [14 11 7 4 12 9 6 2 11 7 4 0 9 6 4 2] [0 7 12 7 2 9 14 9 4 11 16 11 6 12 18 12] [7 11 9 6 4 7 6 2 0 4 2 1 0 2 4 7]>".scale("f#4:minor"))
+    .decay(0.09).sustain(0)
+    .lpf(slider(2800, 400, 7000, 50))
+    .lpq(2.5)
+    .delay(0.42).delaytime(2/16).delayfeedback(0.55)
+    .jux(rev)
+    .gain("<[0.55 0.35 0.5 0.4]*4>")
+    .gain(0.75),
+
+  // 10. НОВАЯ ГЛАВНАЯ МЕЛОДИЯ (F# Minor Celestial Lead)
+  s("saw")
+    .note("<[~ 4 ~ [6 7]] [8 ~ 7 ~]  [9 ~ 8 7] [6 ~ 4 ~]  [5 ~ 4 3] [4 ~ 2 ~]  [1 ~ 2 3] [4 6 8 7]>".scale("f#4:minor"))
+    .attack(0.02).decay(0.32).sustain(0.4).release(0.35)
+    .lpf(3400)
+    .lpq(2.2)
+    .delay(0.45).delaytime(3/16).delayfeedback(0.52)
+    .jux(rev)
+    .room(0.5).size(0.75)
+    .gain(0.8),
+
+  // 11. Резонаторный корпус (Теплый пэд F#m9 - Dmaj7#11 - Bm9 - C#m7)
+  s("sine")
+    .note("<[f#3,a3,c#4,e4,g#4] [d3,f#3,a3,c#4,g#4] [b2,d3,f#3,a3,c#4] [c#3,e3,g#3,b3,d#4]>")
+    .attack(0.4).release(0.9)
+    .lpf(1600)
+    .room(0.75).size(0.85)
+    .gain(0.52),
+
+  // 12. Мягкий хрустальный колокольчик (5-OH Кислород в тонике F#)
+  s("sine")
+    .note("<[~ ~ ~ [f#6,c#7]] [~ ~ ~ [g#6,d7]] [~ ~ ~ [a6,e7]] [~ ~ ~ [b6,f#7]]>")
+    .attack(0.02).decay(0.38).sustain(0)
+    .lpf(1800)
+    .room(0.85).size(0.9)
+    .pan(0.85)
+    .gain(0.28)
+)
