@@ -25,6 +25,7 @@ export function getStrudelToken(voice: string, customMap?: Record<string, string
   if (customMap && customMap[voice]) return customMap[voice];
   if (DEFAULT_STRUDEL_VOICES[voice]) return DEFAULT_STRUDEL_VOICES[voice];
   if (voice.startsWith('electron.')) return 'sd';
+  if (voice.startsWith('motif.group')) return 'cb';
   if (voice.startsWith('motif.')) return 'rim';
   return 'perc';
 }

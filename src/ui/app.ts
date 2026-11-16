@@ -22,7 +22,7 @@ import { DEFAULT_MOD_MATRIX, ModulationMatrix, ModRoute, ModSource, ModDest } fr
 import { buildMoleculePattern, FormMode, PlaybackMode, MotifMode } from '../rhythm/molecule-pattern';
 import { GenreSkeletonId, GENRE_DEFAULT_BPM } from '../rhythm/genre-skeletons';
 import { TimeSignatureOption } from '../rhythm/time-signature';
-import { buildFormSequence } from '../rhythm/form';
+import { buildFormPattern } from '../rhythm/form';
 import { loadRecipes, saveRecipe, SavedRecipe } from '../storage/db';
 import { MoleculeSvgView, VOICE_BADGES, ELEMENT_COLORS } from '../viz/molecule-svg';
 import { SequencerGridView } from '../viz/sequencer-grid';
@@ -68,7 +68,7 @@ export class App {
     this.customOrder = this.currentMolecule.atoms.map((_, idx) => idx);
     const coords = computeMoleculeLayout(this.currentMolecule, this.currentAnalysis, 520, 340);
     this.atomPans = computeAtomPans(coords);
-    this.currentPattern = buildMoleculePattern(this.currentMolecule, {
+    this.currentPattern = buildFormPattern(this.currentMolecule, this.formMode, {
       mode: this.playbackMode,
       atomsPerBar: this.atomsPerBar,
       matrix: this.currentMatrix,
@@ -373,7 +373,7 @@ export class App {
     const coords = computeMoleculeLayout(this.currentMolecule, this.currentAnalysis, svgWidth, svgHeight);
     this.atomPans = computeAtomPans(coords);
 
-    this.currentPattern = buildMoleculePattern(this.currentMolecule, {
+    this.currentPattern = buildFormPattern(this.currentMolecule, this.formMode, {
       mode: this.playbackMode,
       atomsPerBar: this.atomsPerBar,
       matrix: this.currentMatrix,

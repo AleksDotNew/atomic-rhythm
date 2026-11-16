@@ -309,5 +309,25 @@ describe('App interactive UI and Modulation Matrix', () => {
     const stepsInSpan = root.querySelectorAll('.seq-step[data-voice="motif.ring6"][data-hit="true"]');
     expect(stepsInSpan.length).toBeGreaterThan(6);
   });
+
+  // @vitest-environment happy-dom
+  it('switches form to atom assembly and expands timeline with genesis stages', () => {
+    const root = document.createElement('div');
+    const app = new App();
+    app.mount(root);
+
+    const selectForm = root.querySelector('#select-form') as HTMLSelectElement | null;
+    expect(selectForm).toBeTruthy();
+    expect(selectForm?.value).toBe('direct');
+
+    // Switch to 'assembly' mode
+    selectForm!.value = 'assembly';
+    selectForm!.dispatchEvent(new Event('change'));
+
+    // Benzene has 2 unique elements (C, H) = 2 bars + 2 bonding bars + 6 molecule bars = 10 bars total!
+    // Check that part markers up to Part 10 exist
+    const part10Steps = root.querySelectorAll('.seq-step[data-part="10"]');
+    expect(part10Steps.length).toBeGreaterThan(0);
+  });
 });
 
