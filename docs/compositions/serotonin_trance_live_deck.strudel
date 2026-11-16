@@ -1,0 +1,107 @@
+// ============================================================================
+// SEROTONIN (LIVE PERFORMANCE DECK) — HYPNOTIC PROGRESSIVE TRANCE
+// Immediate jam session version: all instruments running in full euphoric trance drive
+// BPM: 138 | Meter: 4/4 | Scale: D Dorian / D Minor
+// ============================================================================
+
+setcps(138 / 60 / 4)
+samples('github:tidalcycles/dirt-samples')
+
+// Switchangel Prebake (optional):
+// await import('https://cdn.jsdelivr.net/gh/switchangel/strudel-scripts@main/allscripts(deprecated).js')
+
+stack(
+  // 1. 4-on-the-Floor Транс-бочка (Углеродный каркас C10)
+  s("bd:4*4")
+    .gain(0.95),
+
+  // 2. Rolling Trance Bass (K-B-B-B Локомотив)
+  s("[~ saw*3]*4")
+    .note("<d1!4 f1!4 g1!4 eb1!4>")
+    .decay(0.13).sustain(0.04)
+    .lpf("<400 650 900 1200 650>")
+    .lpq(3.5)
+    .distort(0.3)
+    .pan(0.5)
+    .gain(0.88),
+
+  // 3. Саб-бас (фундаментальный 45 Гц синус)
+  s("sine*4")
+    .note("<d1!4 f1!4 g1!4 eb1!4>")
+    .decay(0.22).sustain(0.18)
+    .lpf(95)
+    .gain(0.94),
+
+  // 4. Открытый трансовый хэт на слабую долю (Sizzle)
+  s("[~ oh]*4")
+    .hpf(1800)
+    .gain(0.72),
+
+  // 5A. 4 Тихих хэта электронов (Сухой импульс слева)
+  s("hh*4")
+    .hpf(4000)
+    .pan(0.25)
+    .gain(0.48),
+
+  // 5B. ФАНТОМНОЕ ОБЛАКО ЭЛЕКТРОНОВ (Эмерджентная акустическая интерференция)
+  // 4 импульса + 3/16 дилей с обратной связью справа = плотная 16-дольная текстура!
+  s("click*4")
+    .hpf(4500)
+    .crush(6)
+    .delay(0.75).delaytime(3/16).delayfeedback(0.68)
+    .pan(0.75)
+    .gain(0.46),
+
+  // 6. УЗНАВАЕМЫЙ ПАРЯЩИЙ ТРАНС-ЛИД (Главная тема в D Dorian)
+  s("saw")
+    .note("<[~ 4 ~ [6 7]] [8 ~ 7 ~]  [9 ~ 8 7] [5 ~ 4 ~]  [3 ~ 4 5] [4 ~ 2 ~]  [1 ~ 2 3] [4 6 8 7]>".scale("d4:dorian"))
+    .attack(0.02).decay(0.32).sustain(0.4).release(0.35)
+    .lpf("<1800 3200 5500 6500 3500>")
+    .lpq(2.2)
+    .delay(0.45).delaytime(3/16).delayfeedback(0.52)
+    .jux(rev)
+    .room(0.5).size(0.75)
+    .gain(0.8),
+
+  // 7. КАСКАДНЫЙ ГИПНОТИЧЕСКИЙ ТРАНС-АРПЕДЖИО (4 контура: терции, водопад, октавы)
+  s("triangle*2")
+    .note("<[0 4 7 11 2 6 9 12 4 7 11 14 7 11 14 16] [14 11 7 4 12 9 6 2 11 7 4 0 9 6 4 2] [0 7 12 7 2 9 14 9 4 11 16 11 6 12 18 12] [7 11 9 6 4 7 6 2 0 4 2 1 0 2 4 7]>".scale("d4:dorian"))
+    .decay(0.09).sustain(0)
+    .lpf("<1200 2400 4800 6500 3200>")
+    .lpq(2.5)
+    .delay(0.42).delaytime(2/16).delayfeedback(0.55)
+    .jux(rev)
+    .gain("<[0.55 0.35 0.5 0.4]*4>")
+    .gain(0.72),
+
+  // 8. Теплый атмосферный 5-HT пэд (Dm9 - G13 - Bbmaj7 - Am7)
+  s("sine")
+    .note("<[d3,f3,a3,c4,e4] [g3,bb3,d4,f4,a4] [bb2,d3,f3,a3,c4] [a2,c3,e3,g3,b3]>")
+    .attack(0.4).release(0.9)
+    .lpf(1600)
+    .room(0.75).size(0.85)
+    .gain(0.54),
+
+  // 9. Индольное кольцо — фазовое слияние: Пиррол (5/16) слева
+  s("rim(5,16)")
+    .hpf(700)
+    .pan(0.2)
+    .delay(0.4).delaytime(2/16)
+    .gain(0.75),
+
+  // 10. Индольное кольцо — фазовое слияние: Бензол (6/16) справа
+  s("metal:2(6,16)")
+    .hpf(900).lpf(3600)
+    .pan(0.8)
+    .delay(0.4).delaytime(3/16)
+    .gain(0.58),
+
+  // 11. Нежный хрустальный колокольчик (Кислород C5-OH: мерцание в конце такта)
+  s("sine")
+    .note("<[~ ~ ~ [d6,a6]] [~ ~ ~ [e6,b6]] [~ ~ ~ [f6,c7]] [~ ~ ~ [g6,d7]]>")
+    .attack(0.02).decay(0.38).sustain(0)
+    .lpf(1800)
+    .room(0.85).size(0.9)
+    .pan(0.85)
+    .gain(0.28)
+)
