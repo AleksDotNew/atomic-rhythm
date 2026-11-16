@@ -7,7 +7,6 @@
 // 1. Setup Tempo & Sample Libraries:
 setcps(160 / 60 / 4)
 samples('github:tidalcycles/dirt-samples')
-samples('github:ritchse/tidal-drum-machines')
 
 // Optional Switchangel Prebake (раскомментируйте, если не загружен через настройки Strudel):
 // await import('https://cdn.jsdelivr.net/gh/switchangel/strudel-scripts@main/allscripts(deprecated).js')
