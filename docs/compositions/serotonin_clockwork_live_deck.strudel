@@ -92,7 +92,7 @@ stack(
     .gain(sparkGain),
 
   // 10. Полное 16-дольное каскадное арпеджио в F# Minor (4 эволюционирующих контура)
-  note("<[0 4 7 11 2 6 9 12 4 7 11 14 7 11 14 16] [14 11 7 4 12 9 6 2 11 7 4 0 9 6 4 2] [0 7 12 7 2 9 14 9 4 11 16 11 6 12 18 12] [7 11 9 6 4 7 6 2 0 4 2 1 0 2 4 7]>".scale("f#4:minor"))
+  note("<[f#4 c#5 f#5 c#6 a4 e5 a5 d6 c#5 f#5 c#6 f#6 f#5 c#6 f#6 a6] [f#6 c#6 f#5 c#5 d6 a5 e5 a4 c#6 f#5 c#5 f#4 a5 e5 c#5 a4] [f#4 f#5 d6 f#5 a4 a5 f#6 a5 c#5 c#6 a6 c#6 e5 d6 c#7 d6] [f#5 c#6 a5 e5 c#5 f#5 e5 a4 f#4 c#5 a4 g#4 f#4 a4 c#5 f#5]>")
     .s("triangle")
     .decay(0.09).sustain(0)
     .lpf(arpCutoff)
@@ -102,7 +102,7 @@ stack(
     .gain(0.75),
 
   // 11. ГЛАВНАЯ МЕЛОДИЯ (F# Minor Celestial Lead)
-  note("<[~ 4 ~ [6 7]] [8 ~ 7 ~]  [9 ~ 8 7] [6 ~ 4 ~]  [5 ~ 4 3] [4 ~ 2 ~]  [1 ~ 2 3] [4 6 8 7]>".scale("f#4:minor"))
+  note("<[~ c#5 ~ [e5 f#5]] [g#5 ~ f#5 ~]  [a5 ~ g#5 f#5] [e5 ~ c#5 ~]  [d5 ~ c#5 b4] [c#5 ~ a4 ~]  [g#4 ~ a4 b4] [c#5 e5 g#5 f#5]>")
     .s("saw")
     .attack(0.02).decay(0.32).sustain(0.4).release(0.35)
     .lpf(3400)
