@@ -1,6 +1,6 @@
 // ============================================================================
 // GLYCINE (NCC(=O)O) — INTERACTIVE DISTANCE & APPROACH LIVE DECK (124 BPM)
-// Powered by Deep Dirt-Samples: moog, arpy, jvbass, sprvibe, pebbles, water, 808/909, tabla
+// Powered by Deep Dirt-Samples: moog, arpy, jvbass, tink, pebbles, bubble, 808/909, tabla
 // Interactive Slider: Move the "dist" slider to physically move the second atom!
 // dist = 1.0 -> Atom is far away in deep space (muffled, quiet, cavernous, panned, delayed)
 // dist = 0.0 -> Atom has bonded into the united Glycine molecule!
@@ -52,7 +52,7 @@ stack(
   // --------------------------------------------------------------------------
   // МИКРО-СОУДАРЕНИЯ В ПУСТОТЕ: СЭМПЛ PEBBLES (Минеральные столкновения)
   // --------------------------------------------------------------------------
-  s("pebbles:2(7,16)")
+  s("pebbles(7,16)")
     .hpf(2500)
     .pan("<0.1 0.9 0.3 0.7 0.5>")
     .gain(0.52 - dist * 0.25),
@@ -112,10 +112,11 @@ stack(
     .gain(0.65 - dist * 0.45),
 
   // --------------------------------------------------------------------------
-  // ПЕРВОБЫТНЫЙ ОКЕАН: ОРГАНИЧЕСКАЯ ВОДА (Сэмпл water:0)
+  // ПЕРВОБЫТНЫЙ ОКЕАН: ОРГАНИЧЕСКАЯ ВОДНАЯ СРЕДА (Сэмпл bubble:0..3)
   // --------------------------------------------------------------------------
-  s("water:0/4")
-    .lpf(1400)
+  s("<[bubble:0 ~ bubble:2 ~] [~ bubble:1 ~ bubble:3]>")
+    .lpf(1600)
+    .room(0.7).size(0.8)
     .pan("<0.3 0.7 0.4 0.6>")
     .gain(0.25),
 
@@ -130,12 +131,12 @@ stack(
     .gain(0.52),
 
   // --------------------------------------------------------------------------
-  // КИСЛОРОДНЫЙ ХРУСТАЛЬ: КОСМИЧЕСКИЙ ВИБРАФОН (Сэмпл sprvibe!)
+  // КИСЛОРОДНЫЙ ХРУСТАЛЬ: ХРУСТАЛЬНЫЙ КОЛОКОЛЬЧИК (Сэмпл tink!)
   // --------------------------------------------------------------------------
   note("<[~ ~ ~ [e5,b5]] [~ ~ ~ [f5,c6]] [~ ~ ~ [g5,d6]] [~ ~ ~ [a5,e6]]>")
-    .s("sprvibe")
-    .attack(0.02).decay(0.4)
-    .lpf(2200)
+    .s("tink")
+    .decay(0.4)
+    .lpf(2800)
     .room(0.85).size(0.9)
     .pan(0.85)
     .gain(0.35 - dist * 0.2)
