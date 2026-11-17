@@ -88,6 +88,25 @@ Never leave every instrument running identically forever. Use cycle alternation 
 * **Control note lengths:** On 16th-note melodies, use `.decay(0.12).legato(0.7)` so tails do not bleed together.
 * **Stereo Spacing:** Use `.pan(...)` or `.jux(rev)` to spread instruments across the stereo panorama.
 
+### Step 6: Atomic Rhythm Prebake Engine (`prebake.strudel`)
+When writing compositions intended to run with `prebake.strudel` loaded, leverage the pre-baked macros:
+* **Timing & Physics:** `chemTempo(bpm, temp)`
+* **Instruments & Stacks:**
+  * `guitarClean(pat)`: Clean electric guitar with tape delay (`gtr:0`)
+  * `guitarOverdrive(pat)`: Warm tube overdrive (`gtr:1`)
+  * `guitarMetal(pat)`: Dual-tracked metal stack (`gtr:2` + sub-distorted `saw`)
+  * `singingBass(pat)`: Melodic post-rock resonant bass
+  * `subBass(pat)`: Clean 40-60 Hz sub-sine
+  * `crystalShimmer(pat)`: High tink bell arpeggios
+  * `mentasmHoover(pat)`: Alpha Juno rave hoover lead
+  * `ambientPad(chords)`: Atmospheric ambient wash
+  * `gabberKick(pat)`: Distorted waveshaped hardcore kick
+* **Chemical Rhythms:**
+  * `hydrogenHats(pat)`: Dynamic 16th-note electron cloud hats
+  * `bondFlash(pat)`: Covalent bond / detonation explosion
+  * `mineralTexture(pat)`: Pebble / silica matrix textures
+  * `organicBubbles(pat)`: Primordial fluid bubble drops
+
 ---
 
 ## 3. Quick Reference Links

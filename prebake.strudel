@@ -1,0 +1,214 @@
+// ============================================================================
+// ATOMIC RHYTHM — PREBAKE ENGINE (prebake.strudel)
+// Pre-baked runtime environment, instrument macros, and chemical rhythm helpers.
+// 
+// Usage in Strudel (strudel.cc):
+// 1. Paste this script into the "Prebake" tab (Settings / Prebake) in Strudel.
+// 2. Or evaluate this script once before playing your composition.
+// 3. Subsequent compositions become clean, modular, and expressive!
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// 1. SAMPLE BANK INITIALIZATION
+// ----------------------------------------------------------------------------
+samples('github:tidalcycles/dirt-samples')
+
+// ----------------------------------------------------------------------------
+// 2. CHEMICAL PHYSICS & RHYTHMIC TIMING
+// ----------------------------------------------------------------------------
+
+/**
+ * Calculates CPS from BPM taking chemical temperature excitation into account.
+ * Formula: BPM = baseBPM * (1 + Temperature / 100)
+ */
+function chemTempo(bpm, temp = 0) {
+  const effectiveBpm = bpm * (1 + Math.max(0, Math.min(100, temp)) / 100);
+  return setcps(effectiveBpm / 60 / 4);
+}
+
+/**
+ * Hydrogen electron cloud hats (16th-note rolling texture with dynamic accent curve).
+ */
+function hydrogenHats(pattern = "hh*16", hpfCutoff = 4000) {
+  return s(pattern)
+    .velocity("<[0.25 0.75 0.35 0.9 0.25 0.8 0.4 0.95]*2>")
+    .hpf(hpfCutoff);
+}
+
+/**
+ * Covalent bond flash / detonation spark.
+ */
+function bondFlash(pattern = "future:1, cr") {
+  return s(pattern)
+    .hpf(600)
+    .crush(5)
+    .distort(0.4)
+    .room(0.8).size(0.9);
+}
+
+/**
+ * Mineral / pebble micro-collisions (e.g. Diatomite silica matrix).
+ */
+function mineralTexture(pattern = "pebbles:0(5,16)", hpfCutoff = 2500) {
+  return s(pattern)
+    .hpf(hpfCutoff)
+    .room(0.7);
+}
+
+/**
+ * Organic primordial aquatic bubbles / fluid environment.
+ */
+function organicBubbles(pattern = "<[bubble:0 ~ bubble:2 ~] [~ bubble:1 ~ bubble:3]>", lpfCutoff = 1600) {
+  return s(pattern)
+    .lpf(lpfCutoff)
+    .room(0.7).size(0.8);
+}
+
+// ----------------------------------------------------------------------------
+// 3. GUITAR & STRING MACROS
+// ----------------------------------------------------------------------------
+
+/**
+ * Tape-delayed, atmospheric clean electric guitar (Félperc / Post-Rock style).
+ */
+function guitarClean(pat, delayTime = 3/16, feedback = 0.65) {
+  return note(pat)
+    .s("gtr:0")
+    .decay(0.4).sustain(0.2)
+    .lpf(3200)
+    .delay(0.48).delaytime(delayTime).delayfeedback(feedback)
+    .room(0.75).size(0.85);
+}
+
+/**
+ * Warm tube-driven overdrive guitar.
+ */
+function guitarOverdrive(pat, delayTime = 3/16, feedback = 0.6) {
+  return note(pat)
+    .s("gtr:1")
+    .decay(0.35).sustain(0.25)
+    .lpf(4200)
+    .delay(0.42).delaytime(delayTime).delayfeedback(feedback)
+    .room(0.65).size(0.8);
+}
+
+/**
+ * Heavy Metal / Djent guitar stack (distorted electric guitar + down-tuned sub-distorted saw).
+ */
+function guitarMetal(pat, lpfCutoff = 6500) {
+  return stack(
+    note(pat)
+      .s("gtr:2")
+      .decay(0.2).sustain(0.15)
+      .lpf(lpfCutoff)
+      .room(0.25).size(0.8)
+      .delay(0.2).delaytime(3/16).delayfeedback(0.5)
+      .pan(0.35),
+    note(pat)
+      .s("saw")
+      .decay(0.16).sustain(0.08)
+      .distort(0.85)
+      .lpf(lpfCutoff * 0.5)
+      .lpq(4)
+      .pan(0.65)
+  );
+}
+
+// ----------------------------------------------------------------------------
+// 4. BASS & LEAD MACROS
+// ----------------------------------------------------------------------------
+
+/**
+ * Singing post-rock / synth bass with warm body and room resonance.
+ */
+function singingBass(pat, lpfCutoff = 550) {
+  return note(pat)
+    .s("saw")
+    .decay(0.45).sustain(0.35)
+    .lpf(lpfCutoff)
+    .lpq(2.5)
+    .room(0.35);
+}
+
+/**
+ * Pure 40-60 Hz fundamental sub-bass sine oscillator.
+ */
+function subBass(pat, lpfCutoff = 95) {
+  return note(pat)
+    .s("sine")
+    .decay(0.5).sustain(0.4)
+    .lpf(lpfCutoff);
+}
+
+/**
+ * Crystalline shimmer chime bells (tink).
+ */
+function crystalShimmer(pat, delayTime = 3/16) {
+  return note(pat)
+    .s("tink")
+    .decay(0.5)
+    .lpf(3500)
+    .delay(0.5).delaytime(delayTime).delayfeedback(0.7)
+    .room(0.85).size(0.92);
+}
+
+/**
+ * Classic 90s Roland Alpha Juno "Mentasm" Hoover rave lead.
+ */
+function mentasmHoover(pat, lpfCutoff = 4500) {
+  return note(pat)
+    .s("hoover:0")
+    .decay(0.32).sustain(0.5)
+    .lpf(lpfCutoff)
+    .lpq(2.8)
+    .distort(0.35)
+    .room(0.5).size(0.7)
+    .jux(rev);
+}
+
+/**
+ * Warm, slow-attack ambient pad wash.
+ */
+function ambientPad(chords, lpfCutoff = 1200) {
+  return note(chords)
+    .s("sine")
+    .attack(0.8).release(1.2)
+    .lpf(lpfCutoff)
+    .room(0.88).size(0.95);
+}
+
+// ----------------------------------------------------------------------------
+// 5. DRUMS & PERCUSSION MACROS
+// ----------------------------------------------------------------------------
+
+/**
+ * Hardcore / Gabber distorted kick with waveshaping.
+ */
+function gabberKick(pat = "gabba:0!4", distVal = 0.75, lpfCutoff = 8000) {
+  return s(pat)
+    .lpf(lpfCutoff)
+    .distort(distVal)
+    .shape(0.7);
+}
+
+// ----------------------------------------------------------------------------
+// 6. GLOBAL EXPORT & CONFIRMATION
+// ----------------------------------------------------------------------------
+Object.assign(globalThis, {
+  chemTempo,
+  hydrogenHats,
+  bondFlash,
+  mineralTexture,
+  organicBubbles,
+  guitarClean,
+  guitarOverdrive,
+  guitarMetal,
+  singingBass,
+  subBass,
+  crystalShimmer,
+  mentasmHoover,
+  ambientPad,
+  gabberKick
+});
+
+console.log("⚛️ [Atomic Rhythm] prebake.strudel initialized successfully!");
