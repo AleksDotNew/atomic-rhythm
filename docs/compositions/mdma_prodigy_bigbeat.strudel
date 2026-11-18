@@ -1,0 +1,146 @@
+// ============================================================================
+// MDMA (3,4-METHYLENEDIOXYMETHAMPHETAMINE, C11H15NO2) — BIG BEAT / RAVE (136 BPM)
+// In the spirit of Liam Howlett & The Prodigy (The Fat of the Land, Music for the Jilted Generation)
+// Powered by prebake.strudel macros & Deep Dirt-Samples: gretsch, amencutup, moog, gtr, rave, industrial, click
+//
+// Chemical Architecture:
+// 1. Benzene Core (C6): Monolithic, swaggering 136 BPM Big Beat groove (gretsch:13 kick & gretsch:20 snare cracks).
+// 2. Methylenedioxy Ring (-O-CH2-O- at C3,C4): Aggressive, squelching acid 303-style Moog bass riff (moog:0).
+// 3. Amphetamine Carbon Tail (-CH2-CH(CH3)-): Violent punk-rock guitar riff (The Prodigy "Breathe" style: gtr:2 + saw).
+// 4. Secondary Methylamine (-NH-CH3): Searing, pitch-sliding rave synth hook & legendary rave:6 ("prodigyloop")!
+// 5. Monoamine Flood (5-HT / DA / NE Surge): Euphoric rave drops, Amen break rolls, reverse cymbals & crash explosions.
+//
+// Key: F# Minor / F# Dorian | Tempo: 136 BPM
+// ============================================================================
+
+// Автономные фоллбэки макросов (код работает автономно, даже если prebake.strudel не загружен):
+const chemTempo    = globalThis.chemTempo || ((bpm, temp = 0) => setcps((bpm * (1 + temp / 100)) / 60 / 4));
+const subBass      = globalThis.subBass || ((pat, lpf = 95) => note(pat).s("sine").decay(0.5).sustain(0.4).lpf(lpf));
+const hydrogenHats = globalThis.hydrogenHats || ((pat = "hh*16", hpf = 3500) => s(pat).velocity("<[0.25 0.75 0.35 0.9 0.25 0.8 0.4 0.95]*2>").hpf(hpf));
+const guitarMetal  = globalThis.guitarMetal || ((pat, lpf = 6500) => stack(note(pat).s("gtr:2").decay(0.2).sustain(0.15).lpf(lpf).room(0.25).size(0.8).delay(0.2).delaytime(3/16).delayfeedback(0.5).pan(0.35), note(pat).s("saw").decay(0.16).sustain(0.08).distort(0.85).lpf(lpf * 0.5).lpq(4).pan(0.65)));
+const ambientPad   = globalThis.ambientPad || ((chords, lpf = 1200) => note(chords).s("sine").attack(0.8).release(1.2).lpf(lpf).room(0.88).size(0.95));
+
+chemTempo(136)
+samples('github:tidalcycles/dirt-samples')
+
+// ----------------------------------------------------------------------------
+// TIMELINE (64 cycles @ 136 BPM, ~1:53):
+// Phase 1 (cycles 0-7):   Сборка бензольного ядра — Жирный Big Beat кик, кислотный бас вступает
+// Phase 2 (cycles 8-15):  Ввод амфетаминового хвоста — Вступает гитарный панк-рифф The Prodigy
+// Phase 3 (cycles 16-39): ЭЙФОРИЧЕСКИЙ ВСПЛЕСК / RAVE DROP — Рейв-лид, Amen break, полный взрыв
+// Phase 4 (cycles 40-47): Брейкдаун / Замедление пульса — Кик молчит, только гитара, кислота и вокал
+// Phase 5 (cycles 48-63): МАКСИМАЛЬНЫЙ УДАР (Invaders Must Die) — Сумасшедшие брейки, гитара, финал
+// ----------------------------------------------------------------------------
+
+stack(
+  // --------------------------------------------------------------------------
+  // TRACK 1: БЕНЗОЛЬНОЕ КОЛЬЦО (C6) — BIG BEAT PUNCH KICK (gretsch:13 + feel:0)
+  // Синкопированный классический брейкбит-кик на 1-ю долю и синкопу перед 3-й
+  // --------------------------------------------------------------------------
+  s("<[gretsch:13 ~ ~ ~ ~ ~ gretsch:13 ~]!8 [gretsch:13 ~ ~ ~ gretsch:13 ~ gretsch:13 ~]!8 [gretsch:13 ~ ~ ~ ~ ~ gretsch:13 ~]!24 [gretsch:13 ~ ~ ~ ~ ~ ~ ~]!8 [gretsch:13 ~ ~ ~ ~ ~ gretsch:13 ~]!15 [gretsch:13*4]!1>")
+    .lpf("<1800!8 3200!8 8000!24 600!8 8000!16>")
+    .distort("<0.2!8 0.35!8 0.5!24 0.1!8 0.6!16>")
+    .gain("<0.85!8 0.9!8 0.95!24 0!8 0.98!16>"),
+
+  // --------------------------------------------------------------------------
+  // TRACK 2: ХЛЕСТКИЙ СНЕЙР THE PRODIGY (gretsch:20 + sd:1 + призрачные дроби)
+  // Мощный удар на 2 и 4 долю с легким аналоговым дилеем
+  // --------------------------------------------------------------------------
+  s("<[~ ~ ~ ~ [gretsch:20,sd:1] ~ ~ ~]!8 [~ ~ ~ ~ [gretsch:20,sd:1] ~ ~ [gretsch:3]?0.6 ~ ~ ~ ~ [gretsch:20,sd:1] ~ ~ ~]!8 [~ ~ ~ ~ [gretsch:20,sd:1] ~ ~ [gretsch:3]?0.6 ~ ~ ~ ~ [gretsch:20,sd:1] ~ ~ ~]!24 ~!8 [~ ~ ~ ~ [gretsch:20,sd:1] ~ ~ [gretsch:3]?0.6 ~ ~ ~ ~ [gretsch:20,sd:1] ~ ~ ~]!15 [gretsch:20*8]!1>")
+    .hpf(180)
+    .distort(0.35)
+    .room(0.25)
+    .gain("<0.75!8 0.82!8 0.88!24 0!8 0.92!16>"),
+
+  // --------------------------------------------------------------------------
+  // TRACK 3: НАРЕЗКА КУЛЬТОВОГО AMEN BREAK (Сэмпл amencutup)
+  // Живая перебивка барабанов, добавляющая фирменную ярость The Prodigy
+  // --------------------------------------------------------------------------
+  s("<[amencutup:0 amencutup:1 amencutup:2 amencutup:3] [amencutup:4 amencutup:5 amencutup:6 amencutup:7] [amencutup:8 amencutup:9 amencutup:10 amencutup:11] [amencutup:12 amencutup:13 amencutup:14 amencutup:15]>")
+    .hpf(300).lpf(6500)
+    .pan(0.5)
+    .gain("<0!8 0.65!8 0.75!24 0.3!8 0.8!16>"),
+
+  // --------------------------------------------------------------------------
+  // TRACK 4: МЕТИЛЕНДИОКСИ-КОЛЬЦО — КИСЛОТНЫЙ 303-Й БАС (moog:0 + saw)
+  // 5-членное кольцо с двумя кислородами: булькающий, грязный резонансный рифф
+  // --------------------------------------------------------------------------
+  note("<[f#1 ~ f#2 ~ a1 ~ f#1 ~] [b1 ~ f#1 ~ c2 ~ b1 ~] [f#1 ~ f#2 ~ e2 ~ c2 ~] [a1 ~ f#1 ~ e1 ~ f#1 ~]>")
+    .s("moog")
+    .decay(0.24).sustain(0.18)
+    .lpf("<650!8 1100!8 2400!24 1600!8 2800!16>")
+    .lpq(6.5)
+    .distort(0.42)
+    .pan(0.45)
+    .gain("<0.7!8 0.8!8 0.88!24 0.75!8 0.92!16>"),
+
+  // Фундаментальный саб-бас (макрос subBass):
+  subBass("<f#1!2 a1!2 b1!2 e1!2>")
+    .gain("<0.7!8 0.8!8 0.88!24 0.4!8 0.9!16>"),
+
+  // --------------------------------------------------------------------------
+  // TRACK 5: АМФЕТАМИНОВЫЙ ХВОСТ — ПАНК-ГИТАРНЫЙ РИФФ THE PRODIGY (guitarMetal)
+  // В духе "Breathe" / "Firestarter" — грязный, скрежещущий рифф в F# Minor
+  // --------------------------------------------------------------------------
+  guitarMetal("<[f#1 f#1 ~ f#1] [a1 ~ f#1 f#1] [b1 ~ c2 b1] [a1 f#1 e1 ~] [f#1 f#1 ~ f#1] [a1 ~ b1 c2] [f#1 ~ f#1 f#1] [a1 ab1 f#1 ~]>", 6500)
+    .gain("<0!8 0.8!8 0.9!24 0.4!8 0.95!16>"),
+
+  // --------------------------------------------------------------------------
+  // TRACK 6: ВТОРИЧНЫЙ МЕТИЛАМИН — ВИЗЖАЩИЙ РЕЙВ-ЛИД (The Prodigy Rave Lead)
+  // Культовый звук рейва 90-х ("Voodoo People", "No Good") с питч-модуляцией
+  // --------------------------------------------------------------------------
+  note("<[~ f#3 ~ a3] [b3 ~ c4 ~] [~ b3 ~ a3] [f#3 ~ e3 ~] [~ a3 ~ c4] [d4 ~ c4 ~] [~ b3 ~ a3] [f#3 a3 e3 f#3]>")
+    .s("saw")
+    .decay(0.28).sustain(0.35)
+    .lpf("<1800!16 4800!24 2200!8 6500!16>")
+    .lpq(3.5)
+    .delay(0.38).delaytime(3/16).delayfeedback(0.55)
+    .room(0.5).size(0.8)
+    .jux(rev)
+    .gain("<0!16 0.8!24 0!8 0.88!16>"),
+
+  // --------------------------------------------------------------------------
+  // TRACK 7: КУЛЬТОВЫЙ РЕЙВ-СЭМПЛ PRODIGYLOOP (Сэмпл rave:6)
+  // Настоящий заводной сэмпл прямо из банки dirt-samples!
+  // --------------------------------------------------------------------------
+  s("<~!16 [rave:6]!24 ~!8 [rave:6]!16>")
+    .hpf(400)
+    .room(0.4)
+    .gain("<0!16 0.72!24 0!8 0.78!16>"),
+
+  // --------------------------------------------------------------------------
+  // TRACK 8: ВОДОРОДНЫЕ ХЭТЫ (макрос hydrogenHats)
+  // 16-дольный пулеметный шелест
+  // --------------------------------------------------------------------------
+  hydrogenHats("hh*16", 4000)
+    .pan(0.65)
+    .gain("<0.5!8 0.65!8 0.75!24 0.3!8 0.78!16>"),
+
+  // Открытый оффбитный хэт:
+  s("<~!8 [~ oh ~ oh]!32 ~!8 [~ oh ~ oh]!16>")
+    .hpf(3500)
+    .decay(0.18)
+    .gain("<0!8 0.7!32 0!8 0.75!16>"),
+
+  // --------------------------------------------------------------------------
+  // TRACK 9: ИНДУСТРИАЛЬНЫЙ ЛЯЗГ МЕХАНИЗМА (industrial:2, click:0 — БЕЗ ФОНКА)
+  // --------------------------------------------------------------------------
+  s("<[industrial:2(3,8)] [click:0(7,16)] [industrial:4(3,8)] [click:0(5,16)]>")
+    .hpf(1500)
+    .pan("<0.3 0.7 0.4 0.6>")
+    .gain("<0.3!8 0.45!8 0.55!24 0.25!8 0.6!16>"),
+
+  // --------------------------------------------------------------------------
+  // TRACK 10: ДРОП-ВСПЫШКА И КРЭШ (future:1, cr)
+  // --------------------------------------------------------------------------
+  s("<~!15 [future:1, cr]!1 ~!31 [future:1, cr]!1 ~!16>")
+    .hpf(500)
+    .crush(5)
+    .distort(0.35)
+    .room(0.7).size(0.85)
+    .gain(0.95),
+
+  // Крэш на начало 8-тактовых квадратов
+  s("<cr ~!7>")
+    .gain("<0!16 0.65!24 0!8 0.7!16>")
+)
