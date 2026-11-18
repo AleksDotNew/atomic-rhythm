@@ -1,13 +1,13 @@
 // ============================================================================
-// MDMA (3,4-METHYLENEDIOXYMETHAMPHETAMINE, C11H15NO2) — BIG BEAT / RAVE (136 BPM)
-// In the spirit of Liam Howlett & The Prodigy (The Fat of the Land, Music for the Jilted Generation)
-// Powered by prebake.strudel macros & Deep Dirt-Samples: gretsch, amencutup, moog, gtr, rave, industrial, click
+// MDMA (3,4-METHYLENEDIOXYMETHAMPHETAMINE, C11H15NO2) — BIG BEAT / RAVE V2 (136 BPM)
+// High-energy Big Beat / Rave Rock in the spirit of Liam Howlett & The Prodigy
+// Feat: 1/16 Driving Palm-Mute Guitars, Tamed Deep Moog, Soaring Voodoo Rave Hook
 //
 // Chemical Architecture:
 // 1. Benzene Core (C6): Monolithic, swaggering 136 BPM Big Beat groove (gretsch:13 kick & gretsch:20 snare cracks).
-// 2. Methylenedioxy Ring (-O-CH2-O- at C3,C4): Aggressive, squelching acid 303-style Moog bass riff (moog:0).
-// 3. Amphetamine Carbon Tail (-CH2-CH(CH3)-): Violent punk-rock guitar riff (The Prodigy "Breathe" style: gtr:2 + saw).
-// 4. Secondary Methylamine (-NH-CH3): Searing, pitch-sliding rave synth hook & legendary rave:6 ("prodigyloop")!
+// 2. Methylenedioxy Ring (-O-CH2-O- at C3,C4): Tamed, squelching acid 303-style Moog bass riff (moog:0).
+// 3. Amphetamine Carbon Tail (-CH2-CH(CH3)-): Relentless 1/16th-note palm-mute punk-rock guitar chug (gtr:2 + saw).
+// 4. Secondary Methylamine (-NH-CH3): Soaring, fluid, singable rave synth hook & legendary rave:6 ("prodigyloop")!
 // 5. Monoamine Flood (5-HT / DA / NE Surge): Euphoric rave drops, Amen break rolls, reverse cymbals & crash explosions.
 //
 // Key: F# Minor / F# Dorian | Tempo: 136 BPM
@@ -17,7 +17,6 @@
 const chemTempo    = globalThis.chemTempo || ((bpm, temp = 0) => setcps((bpm * (1 + temp / 100)) / 60 / 4));
 const subBass      = globalThis.subBass || ((pat, lpf = 95) => note(pat).s("sine").decay(0.5).sustain(0.4).lpf(lpf));
 const hydrogenHats = globalThis.hydrogenHats || ((pat = "hh*16", hpf = 3500) => s(pat).velocity("<[0.25 0.75 0.35 0.9 0.25 0.8 0.4 0.95]*2>").hpf(hpf));
-const guitarMetal  = globalThis.guitarMetal || ((pat, lpf = 6500) => stack(note(pat).s("gtr:2").decay(0.2).sustain(0.15).lpf(lpf).room(0.25).size(0.8).delay(0.2).delaytime(3/16).delayfeedback(0.5).pan(0.35), note(pat).s("saw").decay(0.16).sustain(0.08).distort(0.85).lpf(lpf * 0.5).lpq(4).pan(0.65)));
 const ambientPad   = globalThis.ambientPad || ((chords, lpf = 1200) => note(chords).s("sine").attack(0.8).release(1.2).lpf(lpf).room(0.88).size(0.95));
 
 chemTempo(136)
@@ -25,11 +24,11 @@ samples('github:tidalcycles/dirt-samples')
 
 // ----------------------------------------------------------------------------
 // TIMELINE (64 cycles @ 136 BPM, ~1:53):
-// Phase 1 (cycles 0-7):   Сборка бензольного ядра — Жирный Big Beat кик, кислотный бас вступает
-// Phase 2 (cycles 8-15):  Ввод амфетаминового хвоста — Вступает гитарный панк-рифф The Prodigy
-// Phase 3 (cycles 16-39): ЭЙФОРИЧЕСКИЙ ВСПЛЕСК / RAVE DROP — Рейв-лид, Amen break, полный взрыв
-// Phase 4 (cycles 40-47): Брейкдаун / Замедление пульса — Кик молчит, только гитара, кислота и вокал
-// Phase 5 (cycles 48-63): МАКСИМАЛЬНЫЙ УДАР (Invaders Must Die) — Сумасшедшие брейки, гитара, финал
+// Phase 1 (cycles 0-7):   Сборка бензольного ядра — Big Beat кик, вкрадчивый Moog-бас
+// Phase 2 (cycles 8-15):  Ввод амфетаминового хвоста — Взрывной 1/16 палм-мьют гитарный кач
+// Phase 3 (cycles 16-39): ЭЙФОРИЧЕСКИЙ ВСПЛЕСК / RAVE DROP — Парящая мелодия, Amen break, полный рейв
+// Phase 4 (cycles 40-47): Брейкдаун — Кик молчит, 1/16 палм-мьют гитара соло с кислотным басом
+// Phase 5 (cycles 48-63): МАКСИМАЛЬНЫЙ УДАР (Invaders Must Die) — Максимальный напор, финал
 // ----------------------------------------------------------------------------
 
 stack(
@@ -62,55 +61,72 @@ stack(
     .gain("<0!8 0.65!8 0.75!24 0.3!8 0.8!16>"),
 
   // --------------------------------------------------------------------------
-  // TRACK 4: МЕТИЛЕНДИОКСИ-КОЛЬЦО — КИСЛОТНЫЙ 303-Й БАС (moog:0 + saw)
-  // 5-членное кольцо с двумя кислородами: булькающий, грязный резонансный рифф
+  // TRACK 4: АМФЕТАМИНОВЫЙ ХВОСТ — ПАНК-ГИТАРА 1/16 ПАЛМ-МЬЮТ (The Prodigy / Pendulum)
+  // Бешеный 16-дольный палм-мьют кач с акцентами в F# Minor!
+  // Слой 1: gtr:2 (перегруз)
   // --------------------------------------------------------------------------
-  note("<[f#1 ~ f#2 ~ a1 ~ f#1 ~] [b1 ~ f#1 ~ c2 ~ b1 ~] [f#1 ~ f#2 ~ e2 ~ c2 ~] [a1 ~ f#1 ~ e1 ~ f#1 ~]>")
+  note("<[f#1*12 a1 f#1 e1 f#1] [f#1*8 b1 f#1 a1 f#1 c2 b1 a1 f#1] [f#1*12 a1 f#1 e1 f#1] [f#1*8 b1 c2 b1 a1 d2 c2 b1 a1]>")
+    .s("gtr:2")
+    .decay(0.14).sustain(0.15)
+    .velocity("<[0.7 0.5 0.6 0.5 0.85 0.5 0.65 0.5 0.7 0.5 0.6 0.5 0.95 0.6 0.8 0.7]>")
+    .hpf(160)
+    .lpf("<2200!8 4500!8 6500!24 3500!8 7000!16>")
+    .room(0.25).size(0.7)
+    .pan(0.35)
+    .gain("<0!4 0.85!12 0.92!24 0.5!8 0.96!16>"),
+
+  // Слой суб-дисторшна под гитарным палм-мьютом:
+  note("<[f#1*12 a1 f#1 e1 f#1] [f#1*8 b1 f#1 a1 f#1 c2 b1 a1 f#1] [f#1*12 a1 f#1 e1 f#1] [f#1*8 b1 c2 b1 a1 d2 c2 b1 a1]>")
+    .s("saw")
+    .decay(0.12).sustain(0.08)
+    .distort(0.75)
+    .hpf(120).lpf("<1500!8 2400!8 3200!24 1800!8 3500!16>")
+    .lpq(3.2)
+    .pan(0.65)
+    .gain("<0!4 0.75!12 0.85!24 0.4!8 0.88!16>"),
+
+  // --------------------------------------------------------------------------
+  // TRACK 5: МЕТИЛЕНДИОКСИ-КОЛЬЦО — ПРИРУЧЕННЫЙ КИСЛОТНЫЙ БАС (moog:0)
+  // Играет в промежутках между долями, не забивая гитары и вокал!
+  // --------------------------------------------------------------------------
+  note("<[f#1 ~ ~ f#1 ~ ~ a1 ~] [~ f#1 ~ ~ c2 b1 a1 ~] [f#1 ~ ~ f#1 ~ ~ e1 ~] [~ f#1 ~ ~ a1 b1 c2 ~]>")
     .s("moog")
-    .decay(0.24).sustain(0.18)
-    .lpf("<650!8 1100!8 2400!24 1600!8 2800!16>")
-    .lpq(6.5)
-    .distort(0.42)
-    .pan(0.45)
-    .gain("<0.7!8 0.8!8 0.88!24 0.75!8 0.92!16>"),
+    .decay(0.2).sustain(0.12)
+    .lpf("<450!8 650!8 850!24 600!8 900!16>")
+    .lpq(3.5)
+    .distort(0.3)
+    .pan(0.5)
+    .gain("<0.68!8 0.72!8 0.75!24 0.6!8 0.78!16>"),
 
   // Фундаментальный саб-бас (макрос subBass):
   subBass("<f#1!2 a1!2 b1!2 e1!2>")
-    .gain("<0.7!8 0.8!8 0.88!24 0.4!8 0.9!16>"),
+    .gain("<0.7!8 0.75!8 0.82!24 0.4!8 0.85!16>"),
 
   // --------------------------------------------------------------------------
-  // TRACK 5: АМФЕТАМИНОВЫЙ ХВОСТ — ПАНК-ГИТАРНЫЙ РИФФ THE PRODIGY (guitarMetal)
-  // В духе "Breathe" / "Firestarter" — грязный, скрежещущий рифф в F# Minor
+  // TRACK 6: ВТОРИЧНЫЙ МЕТИЛАМИН — ПАРЯЩАЯ РЕЙВ-МЕЛОДИЯ (Voodoo / Omen Lead)
+  // Плавная, непрерывная, динамичная и запоминающаяся хук-мелодия в F# Minor!
   // --------------------------------------------------------------------------
-  guitarMetal("<[f#1 f#1 ~ f#1] [a1 ~ f#1 f#1] [b1 ~ c2 b1] [a1 f#1 e1 ~] [f#1 f#1 ~ f#1] [a1 ~ b1 c2] [f#1 ~ f#1 f#1] [a1 ab1 f#1 ~]>", 6500)
-    .gain("<0!8 0.8!8 0.9!24 0.4!8 0.95!16>"),
-
-  // --------------------------------------------------------------------------
-  // TRACK 6: ВТОРИЧНЫЙ МЕТИЛАМИН — ВИЗЖАЩИЙ РЕЙВ-ЛИД (The Prodigy Rave Lead)
-  // Культовый звук рейва 90-х ("Voodoo People", "No Good") с питч-модуляцией
-  // --------------------------------------------------------------------------
-  note("<[~ f#3 ~ a3] [b3 ~ c4 ~] [~ b3 ~ a3] [f#3 ~ e3 ~] [~ a3 ~ c4] [d4 ~ c4 ~] [~ b3 ~ a3] [f#3 a3 e3 f#3]>")
+  note("<[f#4@3 a4@2 b4@3 c#5@3 b4 a4@2 b4@2] [c#5@2 e5@2 c#5@2 b4@2 a4@2 b4@2 f#4@4] [f#4@2 a4@2 b4@2 c#5@2 e5@3 f#5@3 e5@2] [f#5@2 e5@2 c#5@2 b4@2 c#5 b4 a4 f#4 e4@2 f#4@2]>")
     .s("saw")
-    .decay(0.28).sustain(0.35)
-    .lpf("<1800!16 4800!24 2200!8 6500!16>")
-    .lpq(3.5)
-    .delay(0.38).delaytime(3/16).delayfeedback(0.55)
-    .room(0.5).size(0.8)
+    .decay(0.42).sustain(0.6)
+    .lpf("<1800!16 5200!24 2200!8 6500!16>")
+    .lpq(2.8)
+    .delay(0.42).delaytime(3/16).delayfeedback(0.6)
+    .room(0.55).size(0.85)
+    .pan(0.5)
     .jux(rev)
-    .gain("<0!16 0.8!24 0!8 0.88!16>"),
+    .gain("<0!16 0.85!24 0!8 0.9!16>"),
 
   // --------------------------------------------------------------------------
-  // TRACK 7: КУЛЬТОВЫЙ РЕЙВ-СЭМПЛ PRODIGYLOOP (Сэмпл rave:6)
-  // Настоящий заводной сэмпл прямо из банки dirt-samples!
+  // TRACK 7: КУЛЬТОВЫЙ РЕЙВ-СЭМПЛ PRODIGYLOOP (rave:6)
   // --------------------------------------------------------------------------
-  s("<~!16 [rave:6]!24 ~!8 [rave:6]!16>")
+  s("<rave:6 ~!3>")
     .hpf(400)
-    .room(0.4)
-    .gain("<0!16 0.72!24 0!8 0.78!16>"),
+    .room(0.35)
+    .gain("<0!16 0.7!24 0!8 0.75!16>"),
 
   // --------------------------------------------------------------------------
   // TRACK 8: ВОДОРОДНЫЕ ХЭТЫ (макрос hydrogenHats)
-  // 16-дольный пулеметный шелест
   // --------------------------------------------------------------------------
   hydrogenHats("hh*16", 4000)
     .pan(0.65)
@@ -123,7 +139,7 @@ stack(
     .gain("<0!8 0.7!32 0!8 0.75!16>"),
 
   // --------------------------------------------------------------------------
-  // TRACK 9: ИНДУСТРИАЛЬНЫЙ ЛЯЗГ МЕХАНИЗМА (industrial:2, click:0 — БЕЗ ФОНКА)
+  // TRACK 9: ИНДУСТРИАЛЬНЫЙ ЛЯЗГ ШЕСТЕРЕНОК (industrial:2, click:0 — БЕЗ ФОНКА)
   // --------------------------------------------------------------------------
   s("<[industrial:2(3,8)] [click:0(7,16)] [industrial:4(3,8)] [click:0(5,16)]>")
     .hpf(1500)

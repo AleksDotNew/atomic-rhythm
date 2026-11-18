@@ -1,23 +1,22 @@
 // ============================================================================
-// MDMA (3,4-METHYLENEDIOXYMETHAMPHETAMINE, C11H15NO2) — PRODIGY LIVE DECK (136 BPM)
-// In the spirit of Liam Howlett & The Prodigy (The Fat of the Land, Music for the Jilted Generation)
-// Powered by prebake.strudel macros & Deep Dirt-Samples: gretsch, amencutup, moog, gtr, rave, industrial, click
+// MDMA (3,4-METHYLENEDIOXYMETHAMPHETAMINE, C11H15NO2) — PRODIGY LIVE DECK V2 (136 BPM)
+// High-energy Big Beat / Rave Rock in the spirit of Liam Howlett & The Prodigy
+// Feat: 1/16 Driving Palm-Mute Guitars, Tamed Deep Moog, Soaring Voodoo Rave Hook
 //
 // ============================================================================
-// ИНТЕРАКТИВНАЯ ПАНЕЛЬ СЛАЙДЕРОВ В НАЧАЛЕ СТРАНИЦЫ:
+// ИНТЕРАКТИВНАЯ ПАНЕЛЬ СЛАЙДЕРОВ В САМОМ ВЕРХУ СТРАНИЦЫ:
 // Все слайдеры сгруппированы в самом верху для удобного лайв-контроля в Strudel!
 // ============================================================================
-const raveEnergy      = slider(0.8, 0, 1, 0.01)   // Общая эйфорическая рейв-энергия и плотность дропа
-const guitarRiff      = slider(0.85, 0, 1, 0.01)  // Громкость и перегруз панк-гитарного риффа (The Prodigy)
-const acidCutoff      = slider(0.65, 0, 1, 0.01)  // Резонанс и срез кислотного 303-баса (метилендиокси)
-const breakbeatDrive  = slider(0.8, 0, 1, 0.01)   // Плотность и агрессия брейкбитовых сбивок (Amen break)
+const guitarChug      = slider(0.92, 0, 1, 0.01)  // Драйв и громкость 1/16 палм-мьют гитары The Prodigy
+const melodyHook      = slider(0.85, 0, 1, 0.01)  // Громкость и раскрытие парящей рейв-мелодии (Voodoo Lead)
+const acidMoog        = slider(0.68, 0, 1, 0.01)  // Срез Moog-баса (приручен, оставляет воздух для гитар!)
+const breakbeatDrive  = slider(0.82, 0, 1, 0.01)  // Плотность брейкбитовых сбивок и Amen break
 // ============================================================================
 
 // Автономные фоллбэки макросов (код работает автономно, даже если prebake.strudel не загружен):
 const chemTempo    = globalThis.chemTempo || ((bpm, temp = 0) => setcps((bpm * (1 + temp / 100)) / 60 / 4));
 const subBass      = globalThis.subBass || ((pat, lpf = 95) => note(pat).s("sine").decay(0.5).sustain(0.4).lpf(lpf));
 const hydrogenHats = globalThis.hydrogenHats || ((pat = "hh*16", hpf = 3500) => s(pat).velocity("<[0.25 0.75 0.35 0.9 0.25 0.8 0.4 0.95]*2>").hpf(hpf));
-const guitarMetal  = globalThis.guitarMetal || ((pat, lpf = 6500) => stack(note(pat).s("gtr:2").decay(0.2).sustain(0.15).lpf(lpf).room(0.25).size(0.8).delay(0.2).delaytime(3/16).delayfeedback(0.5).pan(0.35), note(pat).s("saw").decay(0.16).sustain(0.08).distort(0.85).lpf(lpf * 0.5).lpq(4).pan(0.65)));
 const ambientPad   = globalThis.ambientPad || ((chords, lpf = 1200) => note(chords).s("sine").attack(0.8).release(1.2).lpf(lpf).room(0.88).size(0.95));
 
 chemTempo(136)
@@ -25,24 +24,26 @@ samples('github:tidalcycles/dirt-samples')
 
 stack(
   // --------------------------------------------------------------------------
-  // TRACK 1: БЕНЗОЛЬНОЕ КОЛЬЦО (C6) — BIG BEAT PUNCH KICK
+  // TRACK 1: БЕНЗОЛЬНОЕ КОЛЬЦО (C6) — УДАРНЫЙ BIG BEAT КИК (gretsch:13 + feel:0)
+  // Синкопированная основа: 1-я доля и синкопа перед 3-й
   // --------------------------------------------------------------------------
   s("<[gretsch:13 ~ ~ ~ ~ ~ gretsch:13 ~] [gretsch:13 ~ ~ ~ gretsch:13 ~ gretsch:13 ~]>")
-    .lpf(1200 + breakbeatDrive * 6800)
-    .distort(0.2 + breakbeatDrive * 0.4)
-    .gain(0.85 + breakbeatDrive * 0.12),
+    .lpf(2200 + breakbeatDrive * 5800)
+    .distort(0.2 + breakbeatDrive * 0.35)
+    .gain(0.88 + breakbeatDrive * 0.1),
 
   // --------------------------------------------------------------------------
   // TRACK 2: ХЛЕСТКИЙ СНЕЙР THE PRODIGY (gretsch:20 + sd:1)
+  // Мощный сухой акустический удар на 2 и 4 долю
   // --------------------------------------------------------------------------
   s("~ ~ ~ ~ [gretsch:20,sd:1] ~ ~ [gretsch:3]?0.6 ~ ~ ~ ~ [gretsch:20,sd:1] ~ ~ ~")
     .hpf(180)
     .distort(0.25 + breakbeatDrive * 0.25)
     .room(0.25)
-    .gain(0.8 + breakbeatDrive * 0.12),
+    .gain(0.82 + breakbeatDrive * 0.12),
 
   // --------------------------------------------------------------------------
-  // TRACK 3: НАРЕЗКА AMEN BREAK (amencutup)
+  // TRACK 3: НАРЕЗКА КУЛЬТОВОГО AMEN BREAK (amencutup)
   // --------------------------------------------------------------------------
   s("<[amencutup:0 amencutup:1 amencutup:2 amencutup:3] [amencutup:4 amencutup:5 amencutup:6 amencutup:7] [amencutup:8 amencutup:9 amencutup:10 amencutup:11] [amencutup:12 amencutup:13 amencutup:14 amencutup:15]>")
     .hpf(300).lpf(3000 + breakbeatDrive * 4500)
@@ -50,72 +51,95 @@ stack(
     .gain(breakbeatDrive * 0.8),
 
   // --------------------------------------------------------------------------
-  // TRACK 4: МЕТИЛЕНДИОКСИ-КОЛЬЦО — КИСЛОТНЫЙ 303-Й БАС (moog:0)
+  // TRACK 4: АМФЕТАМИНОВЫЙ ХВОСТ — ПАНК-ГИТАРА 1/16 ПАЛМ-МЬЮТ (The Prodigy / Pendulum)
+  // Бешеный 16-дольный палм-мьют кач с акцентами в F# Minor!
+  // Слой 1: gtr:2 (перегруз) + Слой 2: saw (тяжелый суб-панч)
   // --------------------------------------------------------------------------
-  note("<[f#1 ~ f#2 ~ a1 ~ f#1 ~] [b1 ~ f#1 ~ c2 ~ b1 ~] [f#1 ~ f#2 ~ e2 ~ c2 ~] [a1 ~ f#1 ~ e1 ~ f#1 ~]>")
-    .s("moog")
-    .decay(0.24).sustain(0.18)
-    .lpf(600 + acidCutoff * 3200)
-    .lpq(3.5 + acidCutoff * 5.0)
-    .distort(0.2 + acidCutoff * 0.4)
-    .pan(0.45)
-    .gain(0.75 + acidCutoff * 0.2),
+  note("<[f#1*12 a1 f#1 e1 f#1] [f#1*8 b1 f#1 a1 f#1 c2 b1 a1 f#1] [f#1*12 a1 f#1 e1 f#1] [f#1*8 b1 c2 b1 a1 d2 c2 b1 a1]>")
+    .s("gtr:2")
+    .decay(0.14).sustain(0.15)
+    .velocity("<[0.7 0.5 0.6 0.5 0.85 0.5 0.65 0.5 0.7 0.5 0.6 0.5 0.95 0.6 0.8 0.7]>")
+    .hpf(160)
+    .lpf(3500 + guitarChug * 3800)
+    .room(0.25).size(0.7)
+    .pan(0.35)
+    .gain(guitarChug),
 
-  // Фундаментальный саб-бас (макрос subBass):
-  subBass("<f#1!2 a1!2 b1!2 e1!2>")
-    .gain(0.7 + acidCutoff * 0.2),
-
-  // --------------------------------------------------------------------------
-  // TRACK 5: АМФЕТАМИНОВЫЙ ХВОСТ — ПАНК-ГИТАРНЫЙ РИФФ THE PRODIGY
-  // --------------------------------------------------------------------------
-  guitarMetal("<[f#1 f#1 ~ f#1] [a1 ~ f#1 f#1] [b1 ~ c2 b1] [a1 f#1 e1 ~] [f#1 f#1 ~ f#1] [a1 ~ b1 c2] [f#1 ~ f#1 f#1] [a1 ab1 f#1 ~]>", 3500 + guitarRiff * 4000)
-    .gain(guitarRiff),
-
-  // --------------------------------------------------------------------------
-  // TRACK 6: ВТОРИЧНЫЙ МЕТИЛАМИН — ВИЗЖАЩИЙ РЕЙВ-ЛИД
-  // --------------------------------------------------------------------------
-  note("<[~ f#3 ~ a3] [b3 ~ c4 ~] [~ b3 ~ a3] [f#3 ~ e3 ~] [~ a3 ~ c4] [d4 ~ c4 ~] [~ b3 ~ a3] [f#3 a3 e3 f#3]>")
+  // Слой суб-дисторшна под гитарным палм-мьютом (для плотного тела в груди):
+  note("<[f#1*12 a1 f#1 e1 f#1] [f#1*8 b1 f#1 a1 f#1 c2 b1 a1 f#1] [f#1*12 a1 f#1 e1 f#1] [f#1*8 b1 c2 b1 a1 d2 c2 b1 a1]>")
     .s("saw")
-    .decay(0.28).sustain(0.35)
-    .lpf(1800 + raveEnergy * 5500)
+    .decay(0.12).sustain(0.08)
+    .distort(0.75)
+    .hpf(120).lpf(2000 + guitarChug * 1800)
+    .lpq(3.2)
+    .pan(0.65)
+    .gain(guitarChug * 0.82),
+
+  // --------------------------------------------------------------------------
+  // TRACK 5: МЕТИЛЕНДИОКСИ-КОЛЬЦО — ПРИРУЧЕННЫЙ КИСЛОТНЫЙ БАС (moog:0)
+  // Синкопированный грув, играющий В ПРОМЕЖУТКАХ, не забивающий гитары и микс!
+  // --------------------------------------------------------------------------
+  note("<[f#1 ~ ~ f#1 ~ ~ a1 ~] [~ f#1 ~ ~ c2 b1 a1 ~] [f#1 ~ ~ f#1 ~ ~ e1 ~] [~ f#1 ~ ~ a1 b1 c2 ~]>")
+    .s("moog")
+    .decay(0.2).sustain(0.12)
+    .lpf(400 + acidMoog * 650)
     .lpq(3.5)
-    .delay(0.38).delaytime(3/16).delayfeedback(0.55)
-    .room(0.5).size(0.8)
+    .distort(0.3)
+    .pan(0.5)
+    .gain(acidMoog * 0.76),
+
+  // Фундаментальный саб-бас (40-55 Гц чистый суб-низ):
+  subBass("<f#1!2 a1!2 b1!2 e1!2>")
+    .gain(0.7 + acidMoog * 0.18),
+
+  // --------------------------------------------------------------------------
+  // TRACK 6: ВТОРИЧНЫЙ МЕТИЛАМИН — ПАРЯЩАЯ РЕЙВ-МЕЛОДИЯ (Voodoo / Omen Lead)
+  // Плавная, непрерывная, динамичная и запоминающаяся хук-мелодия в F# Minor!
+  // --------------------------------------------------------------------------
+  note("<[f#4@3 a4@2 b4@3 c#5@3 b4 a4@2 b4@2] [c#5@2 e5@2 c#5@2 b4@2 a4@2 b4@2 f#4@4] [f#4@2 a4@2 b4@2 c#5@2 e5@3 f#5@3 e5@2] [f#5@2 e5@2 c#5@2 b4@2 c#5 b4 a4 f#4 e4@2 f#4@2]>")
+    .s("saw")
+    .decay(0.42).sustain(0.6)
+    .lpf(2200 + melodyHook * 5500)
+    .lpq(2.8)
+    .delay(0.42).delaytime(3/16).delayfeedback(0.6)
+    .room(0.55).size(0.85)
+    .pan(0.5)
     .jux(rev)
-    .gain(raveEnergy * 0.88),
+    .gain(melodyHook * 0.92),
 
   // --------------------------------------------------------------------------
   // TRACK 7: КУЛЬТОВЫЙ РЕЙВ-СЭМПЛ PRODIGYLOOP (rave:6)
+  // Настоящий архивный сэмпл прямо из банки dirt-samples!
   // --------------------------------------------------------------------------
-  s("rave:6")
+  s("<rave:6 ~!3>")
     .hpf(400)
-    .room(0.4)
-    .gain(raveEnergy > 0.4 ? (raveEnergy - 0.4) * 1.5 : 0),
+    .room(0.35)
+    .gain(melodyHook * 0.72),
 
   // --------------------------------------------------------------------------
-  // TRACK 8: ВОДОРОДНЫЕ ХЭТЫ
+  // TRACK 8: ВОДОРОДНЫЕ ХЭТЫ (макрос hydrogenHats)
   // --------------------------------------------------------------------------
   hydrogenHats("hh*16", 4000)
     .pan(0.65)
-    .gain(0.5 + breakbeatDrive * 0.28),
+    .gain(0.55 + breakbeatDrive * 0.25),
 
   // Открытый оффбитный хэт:
   s("~ oh ~ oh")
     .hpf(3500)
     .decay(0.18)
-    .gain(0.5 + breakbeatDrive * 0.25),
+    .gain(0.55 + breakbeatDrive * 0.22),
 
   // --------------------------------------------------------------------------
-  // TRACK 9: ИНДУСТРИАЛЬНЫЙ ЛЯЗГ (industrial:2, click:0 — БЕЗ ФОНКА)
+  // TRACK 9: ИНДУСТРИАЛЬНЫЙ ЛЯЗГ ШЕСТЕРЕНОК (industrial:2, click:0 — БЕЗ ФОНКА)
   // --------------------------------------------------------------------------
   s("<[industrial:2(3,8)] [click:0(7,16)] [industrial:4(3,8)] [click:0(5,16)]>")
     .hpf(1500)
     .pan("<0.3 0.7 0.4 0.6>")
-    .gain(0.35 + breakbeatDrive * 0.25),
+    .gain(0.32 + breakbeatDrive * 0.25),
 
   // --------------------------------------------------------------------------
-  // TRACK 10: КРЭШ НА ПЕРВУЮ ДОЛЮ
+  // TRACK 10: КРЭШ НА НАЧАЛО 8-ТАКТОВОГО КВАДРАТА
   // --------------------------------------------------------------------------
   s("<cr ~!7>")
-    .gain(0.5 + raveEnergy * 0.25)
+    .gain(0.5 + melodyHook * 0.25)
 )
