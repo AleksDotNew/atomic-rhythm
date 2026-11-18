@@ -1,12 +1,12 @@
 // ============================================================================
 // MORPHINE (C17H19NO3) — INDUSTRIAL ROCK & DREAD (96 BPM)
 // In the spirit of Trent Reznor & Nine Inch Nails (The Downward Spiral, Fragile, Doom)
-// Powered by prebake.strudel macros & Deep Dirt-Samples: feel, industrial, metal, moog, gtr, gretsch, click
+// Powered by prebake.strudel macros & Deep Dirt-Samples: feel, industrial, glitch, moog, gtr, gretsch, click
 //
 // Chemical Architecture:
 // 1. Ring A (Phenol / Benzene ring): Cold, isolated 4-on-the-floor industrial kick (feel:0), hard panned left.
 // 2. Rings B & C (Cyclohexyl core): Gritty syncopated Minimoog bass groove (moog + saw), hard panned right.
-// 3. Ring E (Ether bridge C4-O-C5): Hydraulic clanks (industrial:2, metal:2), closing physical distance.
+// 3. Ring E (Ether bridge C4-O-C5): Hydraulic clanks (industrial:2, glitch:5), closing physical distance.
 // 4. Ring D (Piperidine with N-CH3): Rapid nervous 16th-note hi-hat clouds & covalent bond snap (bondFlash).
 // 5. The Morphinan Pentacyclic Cage: Full industrial catharsis — abrasive wall-of-fuzz guitars (guitarMetal)
 //    contrasted with Trent Reznor's signature fragile, broken, melancholic piano echoing in massive reverb.
@@ -69,9 +69,9 @@ stack(
 
   // --------------------------------------------------------------------------
   // TRACK 3: ЭФИРНЫЙ МОСТИК E — ГИДРАВЛИЧЕСКИЕ СОУДАРЕНИЯ И МИКРО-ГЛИТЧ
-  // Сэмплы industrial:2, metal:2, industrial:4, click:0
+  // Сэмплы industrial:2, glitch:5, industrial:4, click:0
   // --------------------------------------------------------------------------
-  s("<[industrial:2(3,8)] [metal:2(5,16)] [industrial:4(3,8)] [click:0(7,16)]>")
+  s("<[industrial:2(3,8)] [glitch:5(5,16)] [industrial:4(3,8)] [click:0(7,16)]>")
     .hpf(1200)
     .room(0.5)
     .pan("<0.2 0.8 0.35 0.65 0.5>")

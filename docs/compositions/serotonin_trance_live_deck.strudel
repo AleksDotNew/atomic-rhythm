@@ -10,8 +10,10 @@ samples('github:tidalcycles/dirt-samples')
 stack(
   // 1. 4-on-the-Floor Транс-бочка (Углеродный каркас C10)
   s("bd:4*4")
-    .gain(0.95),
+    .gain(0.95).bank("linndrum").room(0.7),
 
+   s("bd:4*16")
+    .gain(0.95).bank("tr909").room(0.2).lpf("< 0 100 200 400 600 1000 1500 1200 900 500 300 100 50>"),
   // 2. Rolling Trance Bass (K-B-B-B Локомотив)
   note("<[~ d1*3]!4 [~ f1*3]!4 [~ g1*3]!4 [~ eb1*3]!4>")
     .s("saw")

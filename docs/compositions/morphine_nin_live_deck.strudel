@@ -1,7 +1,7 @@
 // ============================================================================
 // MORPHINE (C17H19NO3) — NIN INDUSTRIAL LIVE DECK (96 BPM)
 // In the spirit of Trent Reznor & Nine Inch Nails (The Downward Spiral, Fragile, Doom)
-// Powered by prebake.strudel macros & Deep Dirt-Samples: feel, industrial, metal, moog, gtr, gretsch, click
+// Powered by prebake.strudel macros & Deep Dirt-Samples: feel, industrial, glitch, moog, gtr, gretsch, click
 //
 // ============================================================================
 // ИНТЕРАКТИВНАЯ ПАНЕЛЬ СЛАЙДЕРОВ В НАЧАЛЕ СТРАНИЦЫ:
@@ -54,7 +54,7 @@ stack(
   // --------------------------------------------------------------------------
   // TRACK 3: ЭФИРНЫЙ МОСТИК E — ГИДРАВЛИЧЕСКИЕ СОУДАРЕНИЯ И МИКРО-ГЛИТЧ
   // --------------------------------------------------------------------------
-  s("<[industrial:2(3,8)] [metal:2(5,16)] [industrial:4(3,8)] [click:0(7,16)]>")
+  s("<[industrial:2(3,8)] [glitch:5(5,16)] [industrial:4(3,8)] [click:0(7,16)]>")
     .hpf(1200)
     .room(0.5)
     .pan("<0.2 0.8 0.35 0.65 0.5>")
