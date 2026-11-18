@@ -418,6 +418,13 @@ export const PRESETS: readonly MoleculePreset[] = [
     category: 'bio',
   },
   {
+    id: 'lsd',
+    name: 'LSD-25 (Lysergic Acid Diethylamide)',
+    smiles: 'CCN(CC)C(=O)C1CN(C)C2Cc3c[nH]c4cccc(C2=C1)c34',
+    description: 'Ergoline alkaloid with 4 fused rings (6-5-6-6) and branched diethylamide tail',
+    category: 'bio',
+  },
+  {
     id: 'caffeine',
     name: 'Caffeine',
     smiles: 'Cn1cnc2c1c(=O)n(c(=O)n2C)C',

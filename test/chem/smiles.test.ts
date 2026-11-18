@@ -103,6 +103,7 @@ describe('parseSmiles', () => {
       { name: 'Paracetamol', smiles: 'CC(=O)Nc1ccc(O)cc1' },
       { name: 'Dopamine', smiles: 'NCCc1ccc(O)c(O)c1' },
       { name: 'Serotonin', smiles: 'NCCc1c[nH]c2ccc(O)cc12' },
+      { name: 'LSD-25', smiles: 'CCN(CC)C(=O)C1CN(C)C2Cc3c[nH]c4cccc(C2=C1)c34' },
       { name: 'Ascorbic Acid (Vitamin C)', smiles: 'OCC(O)C1OC(=O)C(O)=C1O' },
       // MolDraw specific molecules
       { name: 'Adrenaline', smiles: 'CNC[C@@H](C1=CC(=C(C=C1)O)O)O' },

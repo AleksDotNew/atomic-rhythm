@@ -1,0 +1,150 @@
+// ============================================================================
+// LSD-25 (LIVE PERFORMANCE DECK) — HYPNOTIC PSYCHEDELIC GOA TRANCE
+// Immediate jam session version: all instruments firing at peak Goa drive!
+// Key: D Phrygian Dominant | Master Tempo: 144 BPM | Meter: 4/4
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// 1. LIVE PERFORMANCE SLIDERS (strudel.cc interactive controls)
+// ----------------------------------------------------------------------------
+if (typeof slider === 'undefined') {
+  globalThis.slider = (name, val) => val;
+}
+
+const tempo       = slider('tempo', 144, 136, 152, 1);
+const acidCutoff  = slider('acidCutoff', 2800, 400, 7500, 50);
+const acidRes     = slider('acidRes', 18, 1, 32, 1);
+const bassCutoff  = slider('bassCutoff', 750, 250, 1800, 25);
+const bassDrive   = slider('bassDrive', 0.38, 0, 0.8, 0.05);
+const leadBright  = slider('leadBright', 5500, 1200, 9500, 100);
+const leadGain    = slider('leadGain', 0.88, 0, 1.0, 0.02);
+const spaceDelay  = slider('spaceDelay', 0.52, 0, 0.85, 0.02);
+const spaceEchoFb = slider('spaceEchoFb', 0.65, 0.1, 0.88, 0.02);
+const cosmicVerb  = slider('cosmicVerb', 0.72, 0.1, 0.95, 0.02);
+
+// ----------------------------------------------------------------------------
+// 2. RUNTIME INITIALIZATION
+// ----------------------------------------------------------------------------
+samples('github:tidalcycles/dirt-samples')
+
+const chemTempo = globalThis.chemTempo || ((bpm, temp = 0) => setcps((bpm * (1 + Math.max(0, Math.min(100, temp)) / 100)) / 60 / 4));
+chemTempo(tempo, 0);
+
+stack(
+  // 1. 4-ON-THE-FLOOR ПАНЧЕВАЯ ТРАНС-БОЧКА (TR-909 Core)
+  s("bd:4*4")
+    .bank("tr909")
+    .gain(0.98),
+
+  // 2. ROLLING PSYTRANCE BASS (K-B-B-B Локомотив 4 колец эрголина)
+  note("<[~ d1*3]!4 [~ eb1*3]!4 [~ g1*3]!4 [~ c1*3]!2 [~ a0*3]!2>".slow(4))
+    .s("saw")
+    .decay(0.12).sustain(0.05)
+    .lpf(bassCutoff)
+    .lpq(acidRes * 0.4)
+    .distort(bassDrive)
+    .pan(0.5)
+    .gain(0.92),
+
+  // 3. Саб-бас (фундаментальный 50 Гц синус)
+  note("<d1!4 eb1!4 g1!4 c1!2 a0!2>".slow(4))
+    .s("sine")
+    .decay(0.24).sustain(0.2)
+    .lpf(95)
+    .gain(0.94),
+
+  // 4. Водородные 16-дольные хэты (H25) с акцентами
+  s("hh*16")
+    .velocity("<[0.3 0.7 0.35 0.95 0.3 0.75 0.4 1.0]*2>")
+    .hpf(3800)
+    .gain(0.72),
+
+  // 5. Открытый трансовый sizzle-хэт на слабые доли
+  s("[~ oh]*4")
+    .hpf(2200)
+    .gain(0.75),
+
+  // 6. Ковалентные хлопки (Связи между кольцами) на 2 и 4 долю
+  s("[~ cp ~ cp]")
+    .hpf(900)
+    .room(0.3).size(0.5)
+    .gain(0.8),
+
+  // 7. 303 ACID SQUELCH (Резонанс колец индола A + B)
+  note("<[d3 eb3 f3 g3] [a3 g3 f#3 eb3] [d3 f#3 a3 c4] [bb3 a3 g3 f#3]>".fast(2))
+    .s("saw")
+    .decay(0.14).sustain(0.04)
+    .lpf(acidCutoff)
+    .lpq(acidRes)
+    .distort(0.4)
+    .delay(spaceDelay * 0.8).delaytime(3/16).delayfeedback(spaceEchoFb)
+    .pan(0.35)
+    .gain(0.82),
+
+  // 8A. Диэтиламидный хвост: Левое крыло (Pan 0.18, 3/16 Delay)
+  note("<[d5 f#5 a5 d6] [d6 a5 f#5 eb5] [g5 bb5 d6 c6] [a5 f#5 eb5 d5]>".fast(2))
+    .s("triangle")
+    .decay(0.08).sustain(0)
+    .lpf(acidCutoff)
+    .delay(spaceDelay).delaytime(3/16).delayfeedback(spaceEchoFb)
+    .pan(0.18)
+    .gain(0.72),
+
+  // 8B. Диэтиламидный хвост: Правое крыло (Pan 0.82, 2/16 Delay)
+  note("<[d6 a5 f#5 d5] [eb5 f#5 a5 d6] [c6 d6 bb5 g5] [d5 eb5 f#5 a5]>".fast(2))
+    .s("sine")
+    .decay(0.08).sustain(0)
+    .lpf(acidCutoff)
+    .delay(spaceDelay).delaytime(2/16).delayfeedback(spaceEchoFb)
+    .pan(0.82)
+    .gain(0.72),
+
+  // 9. Полиметрия колец: Бензол 6-пульсов (справа) vs Пиррол 5-пульсов (слева)
+  s("can:1(6,16)")
+    .hpf(1200).lpf(4500)
+    .pan(0.88)
+    .gain(0.58),
+
+  s("rim(5,16)")
+    .hpf(800).lpf(3800)
+    .pan(0.12)
+    .gain(0.62),
+
+  // 10. ГЛАВНЫЙ GOA МЕЛОДИЧЕСКИЙ ЛИД (5-HT2A Serotonin Receptor)
+  // Поющая восточная тема в D Phrygian Dominant (Hijaz) с двойной пилой и эхо
+  note("<[~ d4] [eb4 f#4] [g4 a4] [bb4 a4]  [d5 ~] [c5 bb4] [a4 g4] [f#4 eb4]  [d4 f#4] [a4 d5] [eb5 d5] [c5 a4]  [bb4 a4] [g4 f#4] [eb4 ~] [d4 ~]  [~ d5] [eb5 f#5] [g5 a5] [bb5 a5]  [d6 c6] [bb5 a5] [g5 f#5] [g5 a5]  [bb5 a5] [g5 a5] [f#5 eb5] [f#5 g5]  [a5 ~] [f#5 ~] [eb5 ~] [d5 ~]>".slow(8))
+    .s("saw")
+    .attack(0.015).decay(0.35).sustain(0.45).release(0.3)
+    .lpf(leadBright)
+    .lpq(3.5)
+    .distort(0.2)
+    .delay(spaceDelay).delaytime(3/16).delayfeedback(spaceEchoFb)
+    .jux(rev)
+    .room(cosmicVerb).size(0.85)
+    .gain(leadGain),
+
+  // 11. Октавная гармония лида (Triangle)
+  note("<[~ d5] [eb5 f#5] [g5 a5] [bb5 a5]  [d6 ~] [c6 bb5] [a5 g5] [f#5 eb5]  [d5 f#5] [a5 d6] [eb6 d6] [c6 a5]  [bb5 a5] [g5 f#5] [eb5 ~] [d5 ~]  [~ d6] [eb6 f#6] [g6 a6] [bb6 a6]  [d7 c7] [bb6 a6] [g6 f#6] [g6 a6]  [bb6 a6] [g6 a6] [f#6 eb6] [f#6 g6]  [a6 ~] [f#6 ~] [eb6 ~] [d6 ~]>".slow(8))
+    .s("triangle")
+    .decay(0.25).sustain(0.3)
+    .lpf(leadBright * 1.1)
+    .delay(spaceDelay * 0.9).delaytime(2/16).delayfeedback(0.6)
+    .pan(0.65)
+    .gain(leadGain * 0.8),
+
+  // 12. Теплый психоделический пэд (D Phrygian Chords)
+  note("<[d3,f#3,a3,c4] [eb3,g3,bb3,d4] [g3,bb3,d4,f4] [c3,eb3,g3,bb3]>".slow(4))
+    .s("sine")
+    .attack(0.5).release(1.1)
+    .lpf(1400)
+    .room(cosmicVerb).size(0.92)
+    .gain(0.65),
+
+  // 13. Квантовые фотонные всплески (Верхние электронные орбитали)
+  note("<[d6 a6 f#7] [eb6 bb6 g7] [f#6 c7 a7] [a6 e7 c8]>".scramble())
+    .s("sine")
+    .decay(0.04).sustain(0)
+    .delay(0.6).delaytime(3/16).delayfeedback(0.75)
+    .pan("<0.1 0.9 0.25 0.75>")
+    .gain(0.3)
+)

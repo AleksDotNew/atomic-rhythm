@@ -238,9 +238,9 @@ describe('App interactive UI and Modulation Matrix', () => {
     const filters = root.querySelectorAll('.preset-filter');
     expect(filters.length).toBe(5); // all, atom, inorganic, organic, bio
 
-    // Initial list has all presets (66 presets)
+    // Initial list has all presets (67 presets including LSD-25)
     const initialCards = root.querySelectorAll('.preset-card');
-    expect(initialCards.length).toBe(66);
+    expect(initialCards.length).toBe(67);
 
     // Filter to inorganic
     const inorgFilter = root.querySelector('.preset-filter[data-cat="inorganic"]') as HTMLButtonElement | null;
@@ -263,7 +263,7 @@ describe('App interactive UI and Modulation Matrix', () => {
     const bioFilter = root.querySelector('.preset-filter[data-cat="bio"]') as HTMLButtonElement | null;
     bioFilter?.click();
     const bioCards = root.querySelectorAll('.preset-card');
-    expect(bioCards.length).toBe(17);
+    expect(bioCards.length).toBe(18);
 
     // Click Aspirin
     const aspirinCard = Array.from(bioCards).find(c => c.textContent?.includes('Aspirin')) as HTMLElement | null;
