@@ -11,39 +11,37 @@
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// 1. INTERACTIVE CONTROL SLIDERS (strudel.cc GUI compatible, safe offline defaults)
+// 1. ИНТЕРАКТИВНЫЕ СЛАЙДЕРЫ (strudel.cc GUI compatible)
+// В Strudel сигнатура: slider(defaultValue, min, max, step)
 // ----------------------------------------------------------------------------
-if (typeof slider === 'undefined') {
-  globalThis.slider = (name, val) => val;
-}
-
-// Master Tempo (144 BPM baseline)
-const tempo       = slider('tempo', 144, 136, 152, 1);
+const getSlider = (val, min, max, step) => 
+  (typeof slider === 'function' ? slider(val, min, max, step) : val);
 
 // 303 Acid Resonant Filter Cutoff & Squelch Q
-const acidCutoff  = slider('acidCutoff', 2400, 300, 7500, 50);
-const acidRes     = slider('acidRes', 16, 1, 32, 1);
+const acidCutoff  = getSlider(2400, 300, 7500, 50);
+const acidRes     = getSlider(16, 1, 32, 1);
 
 // Rolling Bassline Cutoff & Distortion Drive
-const bassCutoff  = slider('bassCutoff', 650, 200, 1800, 25);
-const bassDrive   = slider('bassDrive', 0.35, 0, 0.8, 0.05);
+const bassCutoff  = getSlider(650, 200, 1800, 25);
+const bassRes     = getSlider(6, 1, 14, 0.5);
+const bassDrive   = getSlider(0.35, 0, 0.8, 0.05);
 
-// Goa Melodic Lead Brightness & Presence
-const leadBright  = slider('leadBright', 4800, 1000, 9000, 100);
-const leadGain    = slider('leadGain', 0.82, 0, 1.0, 0.02);
+// Goa Melodic Lead Brightness & Gain
+const leadBright  = getSlider(4800, 1000, 9000, 100);
+const leadGain    = getSlider(0.82, 0, 1.0, 0.02);
 
 // Space Echo (3/16 Dotted Delay) & Cosmic Reverb Wetness
-const spaceDelay  = slider('spaceDelay', 0.52, 0, 0.85, 0.02);
-const spaceEchoFb = slider('spaceEchoFb', 0.65, 0.1, 0.88, 0.02);
-const cosmicVerb  = slider('cosmicVerb', 0.72, 0.1, 0.95, 0.02);
+const spaceDelay  = getSlider(0.52, 0, 0.85, 0.02);
+const spaceEchoFb = getSlider(0.65, 0.1, 0.88, 0.02);
+const cosmicVerb  = getSlider(0.72, 0.1, 0.95, 0.02);
 
 // ----------------------------------------------------------------------------
-// 2. RUNTIME ENVIRONMENT & SAMPLE INITIALIZATION
+// 2. ИНИЦИАЛИЗАЦИЯ СЭМПЛОВ И ТЕМПА (144 BPM)
 // ----------------------------------------------------------------------------
 samples('github:tidalcycles/dirt-samples')
 
 const chemTempo = globalThis.chemTempo || ((bpm, temp = 0) => setcps((bpm * (1 + Math.max(0, Math.min(100, temp)) / 100)) / 60 / 4));
-chemTempo(tempo, 0);
+chemTempo(144, 0);
 
 // ============================================================================
 // DRAMATURGY TIMELINE (6 PHASES across 112 cycles @ 144 BPM, 1 cycle = ~1.67s):
@@ -73,17 +71,17 @@ stack(
   // Кольцо C (Тетрагидропиридин, C9=C10) -> g1
   // Кольцо D (Пиперидин + Амид) -> c1 / a0
   // --------------------------------------------------------------------------
-  note("<[~ d1*3]!4 [~ eb1*3]!4 [~ g1*3]!4 [~ c1*3]!2 [~ a0*3]!2>".slow(4))
+  note("<[~ d1*3]!4 [~ eb1*3]!4 [~ g1*3]!4 [~ c1*3]!2 [~ a0*3]!2>")
     .s("saw")
     .decay(0.12).sustain(0.05)
     .lpf("<250!16 420!16 650!16 850!15 0 950!32 450!12 0!4>")
-    .lpq(acidRes * 0.4)
+    .lpq(bassRes)
     .distort(bassDrive)
     .pan(0.5)
     .gain("<0!16 0.65!16 0.85!16 0.88!15 0 0.92!32 0.65!12 0!4>"),
 
   // Фундаментальный саб-бас (45-55 Гц чистый синус под бочку и бас)
-  note("<d1!4 eb1!4 g1!4 c1!2 a0!2>".slow(4))
+  note("<d1!4 eb1!4 g1!4 c1!2 a0!2>")
     .s("sine")
     .decay(0.24).sustain(0.2)
     .lpf(95)
@@ -119,13 +117,13 @@ stack(
     .lpf("<600!16 1100!16 2200!16 3500!15 0 4200!32 1200!12 0!4>")
     .lpq(acidRes)
     .distort(0.4)
-    .delay(spaceDelay * 0.8).delaytime(3/16).delayfeedback(spaceEchoFb)
+    .delay(spaceDelay).delaytime(3/16).delayfeedback(spaceEchoFb)
     .pan(0.35)
     .gain("<0!16 0.6!16 0.74!16 0.78!15 0 0.82!32 0.4!12 0!4>"),
 
   // --------------------------------------------------------------------------
   // TRACK 5: ДВУХКРЫЛЫЙ ДИЭТИЛАМИДНЫЙ ХВОСТ (Стерео-разветвление N(CH2CH3)2)
-  // Левое крыло (Pan 0.15, 3/16 Delay) и Правое крыло (Pan 0.85, 2/16 Delay)
+  // Левое крыло (Pan 0.18, 3/16 Delay) и Правое крыло (Pan 0.82, 2/16 Delay)
   // Создают захватывающую психоделическую стерео-панораму
   // --------------------------------------------------------------------------
   note("<[d5 f#5 a5 d6] [d6 a5 f#5 eb5] [g5 bb5 d6 c6] [a5 f#5 eb5 d5]>".fast(2))
@@ -159,11 +157,11 @@ stack(
     .gain("<0!32 0.5!16 0.55!15 0 0.62!32 0!16>"),
 
   // --------------------------------------------------------------------------
-  // TRACK 7: ГЛАВНЫЙ ПАcompiler GOA МЕЛОДИЧЕСКИЙ ЛИД (Вход в рецептор 5-HT2A)
+  // TRACK 7: ГЛАВНЫЙ GOA МЕЛОДИЧЕСКИЙ ЛИД (Вход в рецептор 5-HT2A)
   // Незабываемая, мистическая восточная тема в D Phrygian Dominant (Hijaz)
-  // Поющая двойная пила с портаменто, каскадными трелями и эхо
+  // 8 последовательных тактов фразы внутри <...>
   // --------------------------------------------------------------------------
-  note("<[~ d4] [eb4 f#4] [g4 a4] [bb4 a4]  [d5 ~] [c5 bb4] [a4 g4] [f#4 eb4]  [d4 f#4] [a4 d5] [eb5 d5] [c5 a4]  [bb4 a4] [g4 f#4] [eb4 ~] [d4 ~]  [~ d5] [eb5 f#5] [g5 a5] [bb5 a5]  [d6 c6] [bb5 a5] [g5 f#5] [g5 a5]  [bb5 a5] [g5 a5] [f#5 eb5] [f#5 g5]  [a5 ~] [f#5 ~] [eb5 ~] [d5 ~]>".slow(8))
+  note("<[[~ d4] [eb4 f#4] [g4 a4] [bb4 a4]] [[d5 ~] [c5 bb4] [a4 g4] [f#4 eb4]] [[d4 f#4] [a4 d5] [eb5 d5] [c5 a4]] [[bb4 a4] [g4 f#4] [eb4 ~] [d4 ~]] [[~ d5] [eb5 f#5] [g5 a5] [bb5 a5]] [[d6 c6] [bb5 a5] [g5 f#5] [g5 a5]] [[bb5 a5] [g5 a5] [f#5 eb5] [f#5 g5]] [[a5 ~] [f#5 ~] [eb5 ~] [d5 ~]]>")
     .s("saw")
     .attack(0.015).decay(0.35).sustain(0.45).release(0.3)
     .lpf(leadBright)
@@ -175,11 +173,11 @@ stack(
     .gain("<0!64 0.85!16 0.92!16 0.5!12 0!4>"),
 
   // Октавная гармония лида на втором пике (Cycles 80-95)
-  note("<[~ d5] [eb5 f#5] [g5 a5] [bb5 a5]  [d6 ~] [c6 bb5] [a5 g5] [f#5 eb5]  [d5 f#5] [a5 d6] [eb6 d6] [c6 a5]  [bb5 a5] [g5 f#5] [eb5 ~] [d5 ~]  [~ d6] [eb6 f#6] [g6 a6] [bb6 a6]  [d7 c7] [bb6 a6] [g6 f#6] [g6 a6]  [bb6 a6] [g6 a6] [f#6 eb6] [f#6 g6]  [a6 ~] [f#6 ~] [eb6 ~] [d6 ~]>".slow(8))
+  note("<[[~ d5] [eb5 f#5] [g5 a5] [bb5 a5]] [[d6 ~] [c6 bb5] [a5 g5] [f#5 eb5]] [[d5 f#5] [a5 d6] [eb6 d6] [c6 a5]] [[bb5 a5] [g5 f#5] [eb5 ~] [d5 ~]] [[~ d6] [eb6 f#6] [g6 a6] [bb6 a6]] [[d7 c7] [bb6 a6] [g6 f#6] [g6 a6]] [[bb6 a6] [g6 a6] [f#6 eb6] [f#6 g6]] [[a6 ~] [f#6 ~] [eb6 ~] [d6 ~]]>")
     .s("triangle")
     .decay(0.25).sustain(0.3)
-    .lpf(leadBright * 1.1)
-    .delay(spaceDelay * 0.9).delaytime(2/16).delayfeedback(0.6)
+    .lpf(leadBright)
+    .delay(spaceDelay).delaytime(2/16).delayfeedback(0.6)
     .pan(0.65)
     .gain("<0!80 0.72!16 0!16>"),
 
@@ -187,7 +185,7 @@ stack(
   // TRACK 8: КВАНТОВЫЙ ВАКУУМ & АТМОСФЕРНЫЙ ПЭД (Электроны оболочек K, L, M)
   // Синусоидальные орбитальные всплески и глубокий психоделический пад
   // --------------------------------------------------------------------------
-  note("<[d3,f#3,a3,c4] [eb3,g3,bb3,d4] [g3,bb3,d4,f4] [c3,eb3,g3,bb3]>".slow(4))
+  note("<[d3,f#3,a3,c4] [eb3,g3,bb3,d4] [g3,bb3,d4,f4] [c3,eb3,g3,bb3]>")
     .s("sine")
     .attack(0.5).release(1.1)
     .lpf(1400)

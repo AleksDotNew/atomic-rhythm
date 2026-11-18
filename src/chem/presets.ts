@@ -425,6 +425,13 @@ export const PRESETS: readonly MoleculePreset[] = [
     category: 'bio',
   },
   {
+    id: 'psilocybin',
+    name: 'Psilocybin (4-PO4-DMT)',
+    smiles: 'CN(C)CCc1c[nH]c2cccc(OP(=O)(O)O)c12',
+    description: 'Tryptamine alkaloid with indole core, dimethylamine tail, and phosphate group',
+    category: 'bio',
+  },
+  {
     id: 'caffeine',
     name: 'Caffeine',
     smiles: 'Cn1cnc2c1c(=O)n(c(=O)n2C)C',
