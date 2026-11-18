@@ -14,7 +14,18 @@
 // Key: C Minor / C Dorian | Tempo: 96 BPM
 // ============================================================================
 
-// Установка темпа с химическим макросом из prebake.strudel:
+// ============================================================================
+// Автономные фоллбэки макросов (код работает автономно, даже если prebake.strudel не загружен):
+// ============================================================================
+const chemTempo    = globalThis.chemTempo || ((bpm, temp = 0) => setcps((bpm * (1 + temp / 100)) / 60 / 4));
+const subBass      = globalThis.subBass || ((pat, lpf = 95) => note(pat).s("sine").decay(0.5).sustain(0.4).lpf(lpf));
+const hydrogenHats = globalThis.hydrogenHats || ((pat = "hh*16", hpf = 3500) => s(pat).velocity("<[0.25 0.75 0.35 0.9 0.25 0.8 0.4 0.95]*2>").hpf(hpf));
+const guitarMetal  = globalThis.guitarMetal || ((pat, lpf = 6500) => stack(note(pat).s("gtr:2").decay(0.2).sustain(0.15).lpf(lpf).room(0.25).size(0.8).delay(0.2).delaytime(3/16).delayfeedback(0.5).pan(0.35), note(pat).s("saw").decay(0.16).sustain(0.08).distort(0.85).lpf(lpf * 0.5).lpq(4).pan(0.65)));
+const ambientPad   = globalThis.ambientPad || ((chords, lpf = 1200) => note(chords).s("sine").attack(0.8).release(1.2).lpf(lpf).room(0.88).size(0.95));
+const bondFlash    = globalThis.bondFlash || ((pat = "future:1, cr") => s(pat).hpf(600).crush(5).distort(0.4).room(0.8).size(0.9));
+// ============================================================================
+
+// Установка темпа:
 chemTempo(96)
 samples('github:tidalcycles/dirt-samples')
 
