@@ -32,7 +32,6 @@ chemTempo(142, 0);
 stack(
   // 1. Земляной 4-on-the-floor кик (C12)
   s("bd:4*4")
-    .bank("tr909")
     .gain(0.98),
 
   // 2. Rolling Forest Bass (Индольный корень в E Phrygian)

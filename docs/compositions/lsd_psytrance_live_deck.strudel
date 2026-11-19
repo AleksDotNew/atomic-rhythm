@@ -33,7 +33,6 @@ chemTempo(144, 0);
 stack(
   // 1. 4-ON-THE-FLOOR ПАНЧЕВАЯ ТРАНС-БОЧКА (TR-909 Core)
   s("bd:4*4")
-    .bank("tr909")
     .gain(0.98),
 
   // 2. ROLLING PSYTRANCE BASS (K-B-B-B Локомотив 4 колец эрголина)
