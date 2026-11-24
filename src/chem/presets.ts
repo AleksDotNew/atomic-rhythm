@@ -502,6 +502,13 @@ export const PRESETS: readonly MoleculePreset[] = [
     category: 'bio',
   },
   {
+    id: 'testosterone',
+    name: 'Testosterone (C19H28O2)',
+    smiles: 'CC12CCC3C(C1CCC2O)CCC4=CC(=O)CCC34C',
+    description: 'Anabolic steroid with 4-en-3-one Ring A & 17b-hydroxyl (Gojira / Meshuggah djent metal)',
+    category: 'bio',
+  },
+  {
     id: 'vitaminc',
     name: 'Ascorbic Acid (Vitamin C)',
     smiles: 'OCC(O)C1OC(=O)C(O)=C1O',
