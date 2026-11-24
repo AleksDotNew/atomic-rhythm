@@ -37,7 +37,8 @@ stack(
 | `<a b c>` | Alternation (Cycle-by-cycle) | `"<bd sd cp>"` | Bar 1: `bd`, Bar 2: `sd`, Bar 3: `cp`. |
 | `(k, n, r)` | Euclidean Bjorklund | `"bd(3,8)"` | 3 equidistant pulses across 8 steps (Tresillo). Optional `r` is rotation. |
 | `[a, b]` | Polyrhythm / Parallel | `"[bd*4, hh*6]"` | Plays 4 against 6 simultaneously in the same duration. |
-| `[a b]%c` | Polymeter / Step-locked | `"[bd hh sd]%5"` | Steps advance on a grid of 5, shifting phase every bar. |
+| `{a, b}` | Polymeter (curly braces) | `"{bd sd cp, hh hh}"` | Step durations match; loops independently until LCM realigns. |
+| `.slow(N/16)` | Polymetric Phasing ($N/16$) | `s("rim!3 ~!2 rim!2").slow(7/16)` | $N$ sixteenth notes cycling across a 4/4 bar (Reich/Meshuggah). |
 | `?` | Probability | `"hh?"` | 50% chance of triggering. `"hh?0.8"` = 80% chance. |
 | `|` | Random choice | `"bd [sd|cp]"` | Randomly picks either `sd` or `cp` on that step. |
 | `:` | Sample index | `"bd:2"` | Uses the 3rd sample in the `bd` directory. |
@@ -123,3 +124,17 @@ note("c'min9").arp("0 1 2 3 4 3 2 1")
 
 3. **Decay & Overlap Control:**
    * On fast notes (`*16` or 16th-note arps), always specify `.decay(0.08).legato(0.6)` so tails don't pile up into a wall of mud.
+
+---
+
+## 6. Dangerous Syntax Pitfalls (Do NOT Use)
+
+| Dangerous Syntax | Why It Fails | Correct Strudel Pattern |
+|---|---|---|
+| `"[a b]%16"` | `%` is not in Strudel's mini-notation parser (`krill.pegjs`). | Use `.slow(N/16)` (e.g. `s("a!3 b!2").slow(5/16)`) or `{a, b}`. |
+| `.sub({ tam: "hh:1" })` | `.sub()` is mathematical subtraction (`subtract`), not token replacement. | Use JavaScript variables: `const tam = "hh:1"`. |
+| `.bank("tr808")` | Often causes `error: sound ... not found! Is it loaded?`. | Use explicit dirt sample names: `s("bd")`, `s("sd")`, `s("hh")`. |
+| `s("tam")` | `tam` sample does not exist in standard dirt-samples. | Use `s("hh:1").hpf(5000)` or `s("metal:0")`. |
+| `s("hhp")` | `hhp` (pedal hat) sample does not exist in dirt-samples. | Use `s("hh").decay(0.05)`. |
+| `s("tr808_triangle")` | Synth waveforms are native oscillators, not sample files. | Use native `s("triangle")`, `s("sine")`, `s("saw")`. |
+| `"~*3"` for 3-bar rest | `~*3` creates 3 rests within **one bar** (a single cycle). | For 3 bars of silence across cycles, use `~!3` inside `<...>`: `<~!3 [pattern]>`. |

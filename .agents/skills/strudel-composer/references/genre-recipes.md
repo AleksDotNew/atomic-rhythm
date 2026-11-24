@@ -120,12 +120,14 @@ stack(
 
   // 2. Meshuggah-style Polymetric Kick & Chug Bass (23/16 riff cycling over 4/4)
   // Riff: 3 + 3 + 3 + 3 + 3 + 3 + 5 = 23 sixteenths!
-  s("[bd!3 ~!2 bd!3 ~!2 bd!3 ~!2 bd!3 ~!2 bd!5 ~!2]%23")
+  s("[bd!3 ~!2 bd!3 ~!2 bd!3 ~!2 bd!3 ~!2 bd!5 ~!2]")
+    .slow(23/16)
     .gain(0.95),
 
   // 3. Distorted Down-Tuned 8-String Guitar Chug (Drop E1 / F1)
   s("saw")
-    .note("[f1!3 ~!2 f1!3 ~!2 f1!3 ~!2 f1!3 ~!2 gb1!2 f1!3 ~!2]%23")
+    .note("[f1!3 ~!2 f1!3 ~!2 f1!3 ~!2 f1!3 ~!2 gb1!2 f1!3 ~!2]")
+    .slow(23/16)
     .decay(0.09).sustain(0.1).release(0.05)
     .distort(0.8)
     .lpf(2200).lpq(4)
@@ -133,7 +135,8 @@ stack(
     .pan(0.5),
 
   // 4. Ghost Snare / Ghost Ghost Ghost accents
-  s("[~ [sd:2]?0.6 ~ [sd:2]?0.4]%23")
+  s("[~ [sd:2]?0.6 ~ [sd:2]?0.4]")
+    .slow(23/16)
     .gain(0.5)
 )
 ```
